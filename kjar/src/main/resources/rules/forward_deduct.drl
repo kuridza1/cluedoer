@@ -10,6 +10,7 @@ import com.ftn.sbnz.model.Reveal;
 import com.ftn.sbnz.model.NoShow;
 import com.ftn.sbnz.model.Solution;
 import com.ftn.sbnz.model.Suggestion;
+import com.ftn.sbnz.model.PrivateShow;
 
 // ============================================================================
 // NIVO 1 - Forward chaining (monotona dedukcija)
@@ -174,4 +175,61 @@ rule "Solution -> NotOwns za sve igrače"
         insert(new NotOwns($p, $c));
         System.out.println("[Sol->NotOwns] Solution(" + $c.getName()
                 + ") -> NotOwns(" + $p.getName() + ", " + $c.getName() + ")");
+end
+
+// ----------------------------------------------------------------------------
+// PrivateShow dedukcija
+// IF P je pokazao NEKU kartu iz sugestije (S, W, R), AND
+//    znamo da P nema S, AND
+//    znamo da P nema W,
+// THEN P mora imati R.
+// (i analogno za druge dve permutacije)
+// ----------------------------------------------------------------------------
+
+rule "PrivateShow: dve od tri eliminisane -> treca je Owns (suspect ostao)"
+    when
+        $ps: PrivateShow($p: shower, $sug: suggestion)
+        $sCard: Card() from $sug.getSuspect()
+        $wCard: Card() from $sug.getWeapon()
+        $rCard: Card() from $sug.getRoom()
+        NotOwns(player == $p, card == $wCard)
+        NotOwns(player == $p, card == $rCard)
+        not Owns(player == $p, card == $sCard)
+    then
+        insert(new Owns($p, $sCard));
+        System.out.println("[PrivateShow] " + $p.getName()
+                + " je pokazao neku iz " + $sug + ", a nema W ni R -> Owns("
+                + $sCard.getName() + ")");
+end
+
+rule "PrivateShow: dve od tri eliminisane -> treca je Owns (weapon ostao)"
+    when
+        $ps: PrivateShow($p: shower, $sug: suggestion)
+        $sCard: Card() from $sug.getSuspect()
+        $wCard: Card() from $sug.getWeapon()
+        $rCard: Card() from $sug.getRoom()
+        NotOwns(player == $p, card == $sCard)
+        NotOwns(player == $p, card == $rCard)
+        not Owns(player == $p, card == $wCard)
+    then
+        insert(new Owns($p, $wCard));
+        System.out.println("[PrivateShow] " + $p.getName()
+                + " je pokazao neku iz " + $sug + ", a nema S ni R -> Owns("
+                + $wCard.getName() + ")");
+end
+
+rule "PrivateShow: dve od tri eliminisane -> treca je Owns (room ostao)"
+    when
+        $ps: PrivateShow($p: shower, $sug: suggestion)
+        $sCard: Card() from $sug.getSuspect()
+        $wCard: Card() from $sug.getWeapon()
+        $rCard: Card() from $sug.getRoom()
+        NotOwns(player == $p, card == $sCard)
+        NotOwns(player == $p, card == $wCard)
+        not Owns(player == $p, card == $rCard)
+    then
+        insert(new Owns($p, $rCard));
+        System.out.println("[PrivateShow] " + $p.getName()
+                + " je pokazao neku iz " + $sug + ", a nema S ni W -> Owns("
+                + $rCard.getName() + ")");
 end

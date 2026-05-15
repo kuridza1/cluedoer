@@ -40,7 +40,9 @@ public class ForwardDemoController {
     private KieSession setupAndFire() {
         KieSession ks = kieContainer.newKieSession("cluedoKSession");
 
-        // --- 1. Karte ---
+        // ========================================================================
+        // 1. Karte (pun Cluedo skup: 6 + 6 + 9 = 21)
+        // ========================================================================
         List<Card> suspects = Arrays.asList(
                 new Card(CardType.SUSPECT, "Scarlet"),
                 new Card(CardType.SUSPECT, "Mustard"),
@@ -79,7 +81,9 @@ public class ForwardDemoController {
             ks.insert(new CardScore(c, 1));
         }
 
-        // --- 2. Igrači ---
+        // ========================================================================
+        // 2. Igrači (6 × 3 = 18 u rukama + 3 u koverti)
+        // ========================================================================
         Player ja = new Player("Ja", 3, true);
         Player A = new Player("A", 3, false);
         Player B = new Player("B", 3, false);
@@ -90,44 +94,79 @@ public class ForwardDemoController {
         ks.insert(ja); ks.insert(A); ks.insert(B);
         ks.insert(C); ks.insert(D); ks.insert(E);
 
-        // --- 3. Sopstvene karte ---
+        // ========================================================================
+        // 3. Moje karte u ruci (Scarlet, Bodez, Kuhinja)
+        // ========================================================================
         ks.insert(new Owns(ja, suspects.get(0))); // Scarlet
         ks.insert(new Owns(ja, weapons.get(0)));  // Bodez
         ks.insert(new Owns(ja, rooms.get(0)));    // Kuhinja
 
-        // --- 4. Opservacije ---
-        ks.insert(new Reveal(A, suspects.get(1)));  // Mustard
-        ks.insert(new Reveal(A, weapons.get(1)));   // Svecnjak
-        ks.insert(new Reveal(B, suspects.get(2)));  // Green
-        ks.insert(new Reveal(C, weapons.get(2)));   // Revolver
-        ks.insert(new Reveal(D, rooms.get(1)));     // Salon
-        ks.insert(new Reveal(E, rooms.get(2)));     // Trpezarija
+        // ========================================================================
+        // 4. Tok partije - 5 sugestija
+        // ========================================================================
 
-        Suggestion sug1 = new Suggestion(ja,
-                suspects.get(3), weapons.get(4), rooms.get(3));
+        // --- Potez 1: A sugeriše (Mustard, Svecnjak, Salon)
+        //     B preskočio, C pokazao A-u (ja ne vidim šta)
+        Suggestion sug1 = new Suggestion(
+                A,
+                suspects.get(1),   // Mustard
+                weapons.get(1),    // Svecnjak
+                rooms.get(1));     // Salon
         ks.insert(sug1);
-        ks.insert(new NoShow(A, sug1));
         ks.insert(new NoShow(B, sug1));
+        ks.insert(new PrivateShow(C, A, sug1));   // C je pokazao A-u, ja ne vidim
 
-        Suggestion sug2 = new Suggestion(A,
-                suspects.get(4), weapons.get(3), rooms.get(4));
+        // --- Potez 2: B sugeriše (Green, Konopac, Biblioteka)
+        //     C pokazao B-u (ja ne vidim šta)
+        Suggestion sug2 = new Suggestion(
+                B,
+                suspects.get(2),   // Green
+                weapons.get(3),    // Konopac
+                rooms.get(3));     // Biblioteka
         ks.insert(sug2);
-        ks.insert(new NoShow(C, sug2));
-        ks.insert(new NoShow(D, sug2));
+        ks.insert(new PrivateShow(C, B, sug2));   // C je pokazao B-u
 
-        Suggestion sug3 = new Suggestion(B,
-                suspects.get(5), weapons.get(5), rooms.get(5));
+        // --- Potez 3: D sugeriše (Plum, OlovnaCev, RadnaSoba)
+        //     E pokazao D-u (ja ne vidim šta)
+        Suggestion sug3 = new Suggestion(
+                D,
+                suspects.get(3),   // Plum
+                weapons.get(4),    // OlovnaCev
+                rooms.get(4));     // RadnaSoba
         ks.insert(sug3);
-        ks.insert(new NoShow(E, sug3));
+        ks.insert(new PrivateShow(E, D, sug3));   // E je pokazao D-u
 
-        // --- 5. Forward chaining ---
+        // --- Potez 4: E sugeriše (Peacock, Revolver, BilijarSoba)
+        //     Ja nemam ništa od toga → NoShow(ja)
+        //     A pokazao E-u (ja ne vidim šta)
+        Suggestion sug4 = new Suggestion(
+                E,
+                suspects.get(4),   // Peacock
+                weapons.get(2),    // Revolver
+                rooms.get(5));     // BilijarSoba
+        ks.insert(sug4);
+        ks.insert(new NoShow(ja, sug4));
+        ks.insert(new PrivateShow(A, E, sug4));   // A je pokazao E-u
+
+        // --- Potez 5: JA sugerišem (White, Kljuc, Plesnjak)
+        //     A nema → NoShow
+        //     B pokazao MENI Kljuc → ovde imamo PRAVI Reveal
+        Suggestion sug5 = new Suggestion(
+                ja,
+                suspects.get(5),   // White
+                weapons.get(5),    // Kljuc
+                rooms.get(6));     // Plesnjak
+        ks.insert(sug5);
+        ks.insert(new NoShow(A, sug5));
+        ks.insert(new Reveal(B, weapons.get(5)));  // B mi je pokazao Kljuc
+
+        // ========================================================================
+        // 5. Forward chaining
+        // ========================================================================
         ks.fireAllRules();
         return ks;
     }
 
-    // ========================================================================
-    // GET /api/demo/forward - sirovi pregled činjenica
-    // ========================================================================
     @GetMapping("/forward")
     public DemoResult runForwardDemo() {
         KieSession ks = setupAndFire();
@@ -147,9 +186,6 @@ public class ForwardDemoController {
         return result;
     }
 
-    // ========================================================================
-    // GET /api/demo/table - strukturirana tabela mogućnosti
-    // ========================================================================
     @GetMapping("/table")
     public PossibilityTable runForwardTable() {
         KieSession ks = setupAndFire();
