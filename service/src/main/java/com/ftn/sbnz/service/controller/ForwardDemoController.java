@@ -209,6 +209,9 @@ public class ForwardDemoController {
         result.knowsCards = ks.getObjects(o -> o instanceof KnowsCard).stream()
                 .map(Object::toString).collect(Collectors.toList());
 
+        result.optimalActions = ks.getObjects(o -> o instanceof OptimalAction).stream()
+                .map(Object::toString).collect(Collectors.toList());
+
         ks.dispose();
         return result;
     }
@@ -318,5 +321,6 @@ public class ForwardDemoController {
         public List<String> suggestCards;
         public List<String> highSuspicions;
         public List<String> knowsCards;
+        public List<String> optimalActions;
     }
 }

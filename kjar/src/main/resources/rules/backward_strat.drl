@@ -1,0 +1,110 @@
+package rules;
+
+import com.ftn.sbnz.model.*;
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.CardScore;
+import com.ftn.sbnz.model.Owns;
+import com.ftn.sbnz.model.NotOwns;
+import com.ftn.sbnz.model.Player;
+import com.ftn.sbnz.model.Reveal;
+import com.ftn.sbnz.model.Suggestion;
+import com.ftn.sbnz.model.GameState;
+import com.ftn.sbnz.model.GameStatus;
+import com.ftn.sbnz.model.Profile;
+import com.ftn.sbnz.model.ProfileType;
+import com.ftn.sbnz.model.RoomFocus;
+import com.ftn.sbnz.model.PriorityCard;
+import com.ftn.sbnz.model.StrategicRecommendation;
+import com.ftn.sbnz.model.CardType;
+import com.ftn.sbnz.model.RiskWarning;
+import com.ftn.sbnz.model.RiskLevel;
+import com.ftn.sbnz.model.ShowRecommendation;
+import com.ftn.sbnz.model.SuggestCard;
+import com.ftn.sbnz.model.HighSuspicion;
+import com.ftn.sbnz.model.KnowsCard;
+import com.ftn.sbnz.model.OptimalAction;
+
+// ============================================================================
+// 6.4 - BACKWARD CHAINING STRATEGY VERIFICATION (STRATEGIC SYSTEM - LEVEL 4)
+// ============================================================================
+
+// ============================================================================
+// 6.4.1 + 6.4.4 - Main strategic decision
+// ============================================================================
+
+// Rule that determines optimal suggestion based on all checks
+rule "6.4.1 - DETERMINE OPTIMAL SUGGESTION"
+salience 10
+when
+    $sugCard: SuggestCard($card: card, $category: category)
+    $maxScore: Number() from accumulate(CardScore(score > 0, $s: score), max($s))
+    CardScore(card == $card, score == $maxScore)  // High info gain
+    CardScore(card == $card, score > 0)  // Eliminates candidates
+    not RiskWarning(level == RiskLevel.HIGH)  // Low disclosure risk
+    not OptimalAction(action == "SUGGESTION", card == $card)
+then
+    insert(new OptimalAction("SUGGESTION", $card, $category,
+        "Suggestion " + $card.getName() + " is optimal - highest score, eliminates candidates, low risk"));
+    System.out.println("[6.4.1] OPTIMAL SUGGESTION: " + $card.getName());
+end
+
+// Rule that determines optimal show action
+rule "6.4.1 - DETERMINE OPTIMAL SHOW"
+salience 10
+when
+    $showRec: ShowRecommendation($card: card)
+    $p: Player(self == true)
+    Reveal(revealer == $p, card == $card)  // Minimal info loss
+    KnowsCard(card == $card)  // Opponent knows this card
+    not OptimalAction(action == "SHOW", card == $card)
+then
+    insert(new OptimalAction("SHOW", $card, null,
+        "Showing " + $card.getName() + " is optimal - opponent already knows it"));
+    System.out.println("[6.4.1] OPTIMAL SHOW: " + $card.getName());
+end
+
+// Rule that determines optimal accusation
+rule "6.4.1 - DETERMINE OPTIMAL ACCUSATION"
+salience 10
+when
+    $card: Card()
+    $cs: CardScore(card == $card, $score: score)
+    $maxScore: Number() from accumulate(CardScore(score > 0, $max: score), max($max))
+    eval($score > 0 && ((double)$score / $maxScore.doubleValue()) > 0.9)
+    not Owns(player.isSelf() == true, card == $card)
+    not Reveal(card == $card)
+    not NotOwns(card == $card)
+    not CardScore(card != $card, card.getType() == $card.getType(), score > 0)
+    not OptimalAction(action == "ACCUSE", card == $card)
+then
+    insert(new OptimalAction("ACCUSE", $card, null,
+        "Final accusation for " + $card.getName() + " is ready - all conditions satisfied"));
+    System.out.println("[6.4.1] OPTIMAL ACCUSATION: " + $card.getName());
+end
+
+// Default strategy - if no optimal action found
+rule "6.4.4 - DEFAULT STRATEGY"
+salience 1
+when
+    GameState($status: status)
+    not OptimalAction()
+    $sugCard: SuggestCard($card: card, $category: category)
+then
+    insert(new OptimalAction("DEFAULT", $card, $category,
+        "Default strategy: " + $card.getName()));
+    System.out.println("[6.4.4] DEFAULT ACTION: " + $card.getName());
+end
+
+// Display the final recommendation
+rule "6.4.4 - DISPLAY RECOMMENDATION"
+when
+    $opt: OptimalAction($action: action, $card: card, $reasoning: reasoning)
+    $gameState: GameState()
+then
+    System.out.println("========================================");
+    System.out.println("FINAL RECOMMENDATION:");
+    System.out.println("ACTION: " + $action);
+    System.out.println("CARD: " + $card.getName());
+    System.out.println("REASON: " + $reasoning);
+    System.out.println("========================================");
+end

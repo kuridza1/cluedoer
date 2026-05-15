@@ -256,3 +256,13 @@ then
         "OPREZ: Igrač " + $p.getName() + " je agresivan u kasnoj igri!"));
     System.out.println("CEP OPREZ: Agresivan protivnik " + $p.getName());
 end
+
+rule "REMOVE OLD PROFILE WHEN NEW ONE IS ADDED"
+when
+    $p: Player()
+    $newProfile: Profile(player == $p)
+    $oldProfile: Profile(player == $p, this != $newProfile)
+then
+    retract($oldProfile);
+    System.out.println("REMOVED OLD PROFILE for " + $p.getName());
+end
