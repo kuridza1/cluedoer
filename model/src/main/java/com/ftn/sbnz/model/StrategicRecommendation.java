@@ -1,44 +1,32 @@
 package com.ftn.sbnz.model;
 
-import java.util.Objects;
-
 /**
- * Tekstualna preporuka strateškog sistema.
+ * Strateška preporuka generisana za određenu fazu igre (6.2.1).
+ * Čuva phase kako bi retract logika u pravilima mogla da targetuje
+ * tačno preporuku iz stare faze bez brisanja sve ostale memorije.
  */
 public class StrategicRecommendation {
 
-    private String message;
+    private GameStatus phase;
+    private String     message;
 
-    public StrategicRecommendation() {
+    // Konstruktor sa fazom (novi, preferirani)
+    public StrategicRecommendation(GameStatus phase, String message) {
+        this.phase   = phase;
+        this.message = message;
     }
 
+    // Backwards-compatible konstruktor bez faze (za stari kod)
     public StrategicRecommendation(String message) {
+        this.phase   = null;
         this.message = message;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof StrategicRecommendation)) return false;
-        StrategicRecommendation that = (StrategicRecommendation) o;
-        return Objects.equals(message, that.message);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(message);
-    }
+    public GameStatus getPhase()   { return phase; }
+    public String     getMessage() { return message; }
 
     @Override
     public String toString() {
-        return "Recommendation: " + message;
+        return "StrategicRecommendation[phase=" + phase + ", msg=" + message + "]";
     }
 }
