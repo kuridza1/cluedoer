@@ -37,11 +37,11 @@ rule "6.4.1 - DETERMINE OPTIMAL SUGGESTION"
 salience 10
 when
     $sugCard: SuggestCard($card: card, $category: category)
-    $maxScore: Number() from accumulate(CardScore(score > 0, $s: score), max($s))
-    CardScore(card == $card, score == $maxScore)  // High info gain
-    CardScore(card == $card, score > 0)  // Eliminates candidates
-    not RiskWarning(level == RiskLevel.HIGH)  // Low disclosure risk
-    not OptimalAction(action == "SUGGESTION", card == $card)
+    $maxScore: Number() from accumulate(CardScore($s: score, score > 0), max($s))
+    $cs: CardScore(card == $card, score == $maxScore)
+    $cs2: CardScore(card == $card, score > 0)
+    not RiskWarning(level == RiskLevel.HIGH)
+    not OptimalAction(action == "SUGGESTION")
 then
     insert(new OptimalAction("SUGGESTION", $card, $category,
         "Suggestion " + $card.getName() + " is optimal - highest score, eliminates candidates, low risk"));
@@ -54,32 +54,48 @@ salience 10
 when
     $showRec: ShowRecommendation($card: card)
     $p: Player(self == true)
-    Reveal(revealer == $p, card == $card)  // Minimal info loss
-    KnowsCard(card == $card)  // Opponent knows this card
-    not OptimalAction(action == "SHOW", card == $card)
+    Reveal(revealer == $p, card == $card)
+    KnowsCard(card == $card)
+    not OptimalAction(action == "SHOW")
 then
     insert(new OptimalAction("SHOW", $card, null,
         "Showing " + $card.getName() + " is optimal - opponent already knows it"));
     System.out.println("[6.4.1] OPTIMAL SHOW: " + $card.getName());
 end
 
-// Rule that determines optimal accusation
+// Rule that determines optimal accusation with complete combination
 rule "6.4.1 - DETERMINE OPTIMAL ACCUSATION"
 salience 10
 when
-    $card: Card()
-    $cs: CardScore(card == $card, $score: score)
-    $maxScore: Number() from accumulate(CardScore(score > 0, $max: score), max($max))
-    eval($score > 0 && ((double)$score / $maxScore.doubleValue()) > 0.9)
-    not Owns(player.isSelf() == true, card == $card)
-    not Reveal(card == $card)
-    not NotOwns(card == $card)
-    not CardScore(card != $card, card.getType() == $card.getType(), score > 0)
-    not OptimalAction(action == "ACCUSE", card == $card)
+    GameState(status == GameStatus.LATE_GAME)
+
+    // Only one suspect remaining (score > 0)
+    $suspect: Card(type == CardType.SUSPECT)
+    $suspectScore: CardScore(card == $suspect, score > 0)
+    not Card(type == CardType.SUSPECT, this != $suspect) and CardScore(card != $suspect, card.getType() == CardType.SUSPECT, score > 0)
+
+    // Only one weapon remaining (score > 0)
+    $weapon: Card(type == CardType.WEAPON)
+    $weaponScore: CardScore(card == $weapon, score > 0)
+    not Card(type == CardType.WEAPON, this != $weapon) and CardScore(card != $weapon, card.getType() == CardType.WEAPON, score > 0)
+
+    // Only one room remaining (score > 0)
+    $room: Card(type == CardType.ROOM)
+    $roomScore: CardScore(card == $room, score > 0)
+    not Card(type == CardType.ROOM, this != $room) and CardScore(card != $room, card.getType() == CardType.ROOM, score > 0)
+
+    not OptimalAction(action == "ACCUSE")
+
 then
-    insert(new OptimalAction("ACCUSE", $card, null,
-        "Final accusation for " + $card.getName() + " is ready - all conditions satisfied"));
-    System.out.println("[6.4.1] OPTIMAL ACCUSATION: " + $card.getName());
+    insert(new OptimalAction("ACCUSE", $suspect, $weapon, $room,
+        "Final accusation ready! Only remaining cards: " +
+        $suspect.getName() + ", " + $weapon.getName() + ", " + $room.getName()));
+    System.out.println("========================================");
+    System.out.println("FINAL ACCUSATION READY:");
+    System.out.println("SUSPECT: " + $suspect.getName());
+    System.out.println("WEAPON: " + $weapon.getName());
+    System.out.println("ROOM: " + $room.getName());
+    System.out.println("========================================");
 end
 
 // Default strategy - if no optimal action found
@@ -98,13 +114,19 @@ end
 // Display the final recommendation
 rule "6.4.4 - DISPLAY RECOMMENDATION"
 when
-    $opt: OptimalAction($action: action, $card: card, $reasoning: reasoning)
+    $opt: OptimalAction($action: action, $reasoning: reasoning)
     $gameState: GameState()
 then
     System.out.println("========================================");
     System.out.println("FINAL RECOMMENDATION:");
     System.out.println("ACTION: " + $action);
-    System.out.println("CARD: " + $card.getName());
+    if ("ACCUSE".equals($action)) {
+        System.out.println("SUSPECT: " + $opt.getSuspect().getName());
+        System.out.println("WEAPON: " + $opt.getWeapon().getName());
+        System.out.println("ROOM: " + $opt.getRoom().getName());
+    } else if ($opt.getCard() != null) {
+        System.out.println("CARD: " + $opt.getCard().getName());
+    }
     System.out.println("REASON: " + $reasoning);
     System.out.println("========================================");
 end
