@@ -1,4 +1,4 @@
-package com.ftn.sbnz.kjar.rules;
+package com.ftn.sbnz.kjar.src.main.resources.rules;
 
 import com.ftn.sbnz.model.Card;
 import com.ftn.sbnz.model.CardType;
