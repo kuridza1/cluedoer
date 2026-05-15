@@ -19,6 +19,7 @@ import com.ftn.sbnz.model.CardType;
 import com.ftn.sbnz.model.RiskWarning;
 import com.ftn.sbnz.model.RiskLevel;
 import com.ftn.sbnz.model.ShowRecommendation;
+import com.ftn.sbnz.model.SuggestCard;
 
 
 // ============================================================================
@@ -83,7 +84,6 @@ end
 // ============================================================================
 
 // DEFENSIVE: protivnik je pokazivao istu kartu 3+ puta
-// (u demo-u se tri Reveal(A, ista_karta) ubacuju rucno da bi se aktiviralo)
 rule "6.1.1 - DEFENSIVE"
 when
     $p: Player(self == false)
@@ -94,10 +94,13 @@ when
     )
     not Profile(player == $p, profile == ProfileType.DEFENSIVE)
 then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof Profile && ((Profile) obj).getPlayer() == $p)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new Profile($p, ProfileType.DEFENSIVE));
     System.out.println("[6.1.1] PROFILE DEFENSIVE -> " + $p.getName());
 end
-
 
 // BLUFFING: protivnik je u svojoj sugestiji naveo kartu za koju znamo da je
 // on sam poseduje
@@ -108,10 +111,14 @@ when
     Suggestion(suggester == $p, (suspect == $c || weapon == $c || room == $c))
     not Profile(player == $p, profile == ProfileType.BLUFFING)
 then
+    // Remove any existing profile for this player
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof Profile && ((Profile) obj).getPlayer() == $p)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new Profile($p, ProfileType.BLUFFING));
     System.out.println("[6.1.1] PROFILE BLUFFING -> " + $p.getName());
 end
-
 
 // ROOM FOCUS: protivnik je 3+ puta koristio istu prostoriju u sugestijama
 rule "6.1.1 - ROOM FOCUS"
@@ -318,42 +325,52 @@ end
 // 6.2.3 - PROCENA RIZIKA
 // ============================================================================
 
-// VISOK RIZIK: u kasnoj igri postoji protivnik koji blefira
+// HIGH RISK - retractuje sva druga upozorenja
 rule "6.2.3 - HIGH RISK WARNING (bluffing + late game)"
+salience 10  // Najviši priority
 when
     GameState(status == GameStatus.LATE_GAME)
     Profile($p: player, profile == ProfileType.BLUFFING)
-    not RiskWarning(level == RiskLevel.HIGH)
 then
+    // Obriši sva postojeća upozorenja
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof RiskWarning)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new RiskWarning(RiskLevel.HIGH, $p,
-        "UPOZORENJE: Igrač " + $p.getName() + " blefira u kasnoj igri! Rizik od loseg poteza je VISOK."));
-    System.out.println("[6.2.3] RISK WARNING HIGH -> uzrok: " + $p.getName());
+        "UPOZORENJE: Igrač " + $p.getName() + " blefira u kasnoj igri!"));
 end
 
-
-// SREDNJI RIZIK: postoji bluffer ali nije kasna igra
+// MEDIUM RISK - samo ako nema HIGH
 rule "6.2.3 - MEDIUM RISK WARNING (bluffing + not late game)"
+salience 5
 when
     GameState(status != GameStatus.LATE_GAME)
     Profile($p: player, profile == ProfileType.BLUFFING)
     not RiskWarning(level == RiskLevel.HIGH)
-    not RiskWarning(level == RiskLevel.MEDIUM)
 then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof RiskWarning)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new RiskWarning(RiskLevel.MEDIUM, $p,
-        "NAPOMENA: Igrač " + $p.getName() + " mozda blefira. Pracen je rizik."));
-    System.out.println("[6.2.3] RISK WARNING MEDIUM -> uzrok: " + $p.getName());
+        "NAPOMENA: Igrač " + $p.getName() + " možda blefira."));
 end
 
-
-// BEZ RIZIKA: nema bluffera
+// LOW RISK - samo ako nema bluffera i nema drugih upozorenja
 rule "6.2.3 - LOW RISK (no bluffing detected)"
+salience 1
 when
     not Profile(profile == ProfileType.BLUFFING)
-    not RiskWarning(level == RiskLevel.LOW)
+    not RiskWarning(level == RiskLevel.HIGH)
+    not RiskWarning(level == RiskLevel.MEDIUM)
 then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof RiskWarning)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new RiskWarning(RiskLevel.LOW, null,
         "Nije detektovan rizik. Nastavi prema strategiji."));
-    System.out.println("[6.2.3] RISK -> LOW");
 end
 
 // ============================================================================
