@@ -72,6 +72,48 @@
             text-align: center;
             font-weight: bold;
         }
+        .turns, .hints {
+            margin-top: 40px;
+        }
+        .turn-row {
+            padding: 12px 16px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .turn-num {
+            display: inline-block;
+            background: #1a1a1a;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 12px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 0 4px;
+        }
+        .tag-suspect { background: #ffe5e5; color: #8a3030; }
+        .tag-weapon  { background: #e5f1ff; color: #2c5282; }
+        .tag-room    { background: #e5ffe5; color: #2f6b2f; }
+        .tag-result  { background: #f5f5f5; color: #555; }
+        .hint-row {
+            padding: 10px 14px;
+            background: #fff9e6;
+            border-left: 3px solid #f0c040;
+            margin-bottom: 6px;
+            font-size: 13px;
+            border-radius: 0 4px 4px 0;
+        }
     </style>
 </head>
 <body>
@@ -88,6 +130,17 @@
     <div class="legend-item"><span class="legend-box cell-S">✓</span> u koverti</div>
 </div>
 
+<div class="turns">
+    <h2>Tok partije</h2>
+    <div id="turnsList"></div>
+</div>
+
+<div class="hints">
+    <h2>Slabe činjenice (disjunkcije)</h2>
+    <div class="meta">Ko ima bar jednu od navedenih karata — još ne znamo koju.</div>
+    <div id="hintsList"></div>
+</div>
+
 <script>
     async function load() {
         const res = await fetch('/api/demo/table');
@@ -98,7 +151,6 @@
 
         const container = document.getElementById('tables');
         container.innerHTML = '';
-
         for (const group of data.groups) {
             const title = document.createElement('div');
             title.className = 'category-title';
@@ -131,6 +183,49 @@
             }
             table.appendChild(tbody);
             container.appendChild(table);
+        }
+
+        // Tok partije
+        const turnsEl = document.getElementById('turnsList');
+        turnsEl.innerHTML = '';
+        for (const t of (data.turns || [])) {
+            const div = document.createElement('div');
+            div.className = 'turn-row';
+            let result;
+            if (t.revealedCard) {
+                result = `<strong>${t.shower}</strong> pokazao <span class="tag tag-result">${t.revealedCard}</span> meni`;
+            } else if (t.isPrivate) {
+                result = `<strong>${t.shower}</strong> pokazao neku kartu igraču <strong>${t.shownTo}</strong> (ne vidim koju)`;
+            } else {
+                result = `niko nije pokazao`;
+            }
+            const noShows = (t.noShowPlayers || []).length > 0
+                ? ` &nbsp;·&nbsp; preskočili: ${t.noShowPlayers.join(', ')}`
+                : '';
+            div.innerHTML =
+                `<span class="turn-num">${t.number}</span>` +
+                `<strong>${t.suggester}</strong> sugeriše: ` +
+                `<span class="tag tag-suspect">${t.suspect}</span>` +
+                `<span class="tag tag-weapon">${t.weapon}</span>` +
+                `<span class="tag tag-room">${t.room}</span>` +
+                `<br><span style="margin-left:34px;color:#666">→ ${result}${noShows}</span>`;
+            turnsEl.appendChild(div);
+        }
+
+        // Disjunkcije
+        const hintsEl = document.getElementById('hintsList');
+        hintsEl.innerHTML = '';
+        if ((data.hints || []).length === 0) {
+            hintsEl.innerHTML = '<div class="meta">Nema slabih činjenica.</div>';
+        } else {
+            for (const h of data.hints) {
+                const div = document.createElement('div');
+                div.className = 'hint-row';
+                div.innerHTML =
+                    `(potez ${h.turnNumber}) <strong>${h.player}</strong> ima bar jednu od: ` +
+                    h.candidateCards.map(c => `<span class="tag tag-result">${c}</span>`).join('');
+                hintsEl.appendChild(div);
+            }
         }
     }
 

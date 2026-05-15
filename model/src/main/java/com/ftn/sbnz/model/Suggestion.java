@@ -10,16 +10,28 @@ public class Suggestion {
     private Card suspect;
     private Card weapon;
     private Card room;
+    private int turnNumber;
 
     public Suggestion() {
     }
 
+
+    // u konstruktoru postojećem:
     public Suggestion(Player suggester, Card suspect, Card weapon, Card room) {
         this.suggester = suggester;
         this.suspect = suspect;
         this.weapon = weapon;
         this.room = room;
     }
+
+    // novi konstruktor:
+    public Suggestion(int turnNumber, Player suggester, Card suspect, Card weapon, Card room) {
+        this(suggester, suspect, weapon, room);
+        this.turnNumber = turnNumber;
+    }
+
+    public int getTurnNumber() { return turnNumber; }
+    public void setTurnNumber(int turnNumber) { this.turnNumber = turnNumber; }
 
     public Player getSuggester() { return suggester; }
     public void setSuggester(Player suggester) { this.suggester = suggester; }

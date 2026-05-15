@@ -40,9 +40,7 @@ public class ForwardDemoController {
     private KieSession setupAndFire() {
         KieSession ks = kieContainer.newKieSession("cluedoKSession");
 
-        // ========================================================================
-        // 1. Karte (pun Cluedo skup: 6 + 6 + 9 = 21)
-        // ========================================================================
+        // ===== Karte =====
         List<Card> suspects = Arrays.asList(
                 new Card(CardType.SUSPECT, "Scarlet"),
                 new Card(CardType.SUSPECT, "Mustard"),
@@ -81,9 +79,7 @@ public class ForwardDemoController {
             ks.insert(new CardScore(c, 1));
         }
 
-        // ========================================================================
-        // 2. Igrači (6 × 3 = 18 u rukama + 3 u koverti)
-        // ========================================================================
+        // ===== Igrači =====
         Player ja = new Player("Ja", 3, true);
         Player A = new Player("A", 3, false);
         Player B = new Player("B", 3, false);
@@ -94,75 +90,54 @@ public class ForwardDemoController {
         ks.insert(ja); ks.insert(A); ks.insert(B);
         ks.insert(C); ks.insert(D); ks.insert(E);
 
-        // ========================================================================
-        // 3. Moje karte u ruci (Scarlet, Bodez, Kuhinja)
-        // ========================================================================
+        // ===== Moje karte =====
         ks.insert(new Owns(ja, suspects.get(0))); // Scarlet
         ks.insert(new Owns(ja, weapons.get(0)));  // Bodez
         ks.insert(new Owns(ja, rooms.get(0)));    // Kuhinja
 
         // ========================================================================
-        // 4. Tok partije - 5 sugestija
+        // Tok partije
         // ========================================================================
 
-        // --- Potez 1: A sugeriše (Mustard, Svecnjak, Salon)
-        //     B preskočio, C pokazao A-u (ja ne vidim šta)
-        Suggestion sug1 = new Suggestion(
-                A,
-                suspects.get(1),   // Mustard
-                weapons.get(1),    // Svecnjak
-                rooms.get(1));     // Salon
+        // Potez 1: A sugeriše (Mustard, Svecnjak, Salon)
+        //   B preskočio (NoShow), C pokazao A-u (PrivateShow)
+        Suggestion sug1 = new Suggestion(A,
+                suspects.get(1), weapons.get(1), rooms.get(1));
         ks.insert(sug1);
         ks.insert(new NoShow(B, sug1));
-        ks.insert(new PrivateShow(C, A, sug1));   // C je pokazao A-u, ja ne vidim
+        ks.insert(new PrivateShow(C, A, sug1));
 
-        // --- Potez 2: B sugeriše (Green, Konopac, Biblioteka)
-        //     C pokazao B-u (ja ne vidim šta)
-        Suggestion sug2 = new Suggestion(
-                B,
-                suspects.get(2),   // Green
-                weapons.get(3),    // Konopac
-                rooms.get(3));     // Biblioteka
+        // Potez 2: B sugeriše (Green, Konopac, Biblioteka)
+        //   C pokazao B-u (PrivateShow)
+        Suggestion sug2 = new Suggestion(B,
+                suspects.get(2), weapons.get(3), rooms.get(3));
         ks.insert(sug2);
-        ks.insert(new PrivateShow(C, B, sug2));   // C je pokazao B-u
+        ks.insert(new PrivateShow(C, B, sug2));
 
-        // --- Potez 3: D sugeriše (Plum, OlovnaCev, RadnaSoba)
-        //     E pokazao D-u (ja ne vidim šta)
-        Suggestion sug3 = new Suggestion(
-                D,
-                suspects.get(3),   // Plum
-                weapons.get(4),    // OlovnaCev
-                rooms.get(4));     // RadnaSoba
+        // Potez 3: D sugeriše (Plum, OlovnaCev, RadnaSoba)
+        //   E pokazao D-u (PrivateShow)
+        Suggestion sug3 = new Suggestion(D,
+                suspects.get(3), weapons.get(4), rooms.get(4));
         ks.insert(sug3);
-        ks.insert(new PrivateShow(E, D, sug3));   // E je pokazao D-u
+        ks.insert(new PrivateShow(E, D, sug3));
 
-        // --- Potez 4: E sugeriše (Peacock, Revolver, BilijarSoba)
-        //     Ja nemam ništa od toga → NoShow(ja)
-        //     A pokazao E-u (ja ne vidim šta)
-        Suggestion sug4 = new Suggestion(
-                E,
-                suspects.get(4),   // Peacock
-                weapons.get(2),    // Revolver
-                rooms.get(5));     // BilijarSoba
+        // Potez 4: E sugeriše (Peacock, Revolver, BilijarSoba)
+        //   Ja preskočila (NoShow), A pokazao E-u (PrivateShow)
+        Suggestion sug4 = new Suggestion(E,
+                suspects.get(4), weapons.get(2), rooms.get(5));
         ks.insert(sug4);
         ks.insert(new NoShow(ja, sug4));
-        ks.insert(new PrivateShow(A, E, sug4));   // A je pokazao E-u
+        ks.insert(new PrivateShow(A, E, sug4));
 
-        // --- Potez 5: JA sugerišem (White, Kljuc, Plesnjak)
-        //     A nema → NoShow
-        //     B pokazao MENI Kljuc → ovde imamo PRAVI Reveal
-        Suggestion sug5 = new Suggestion(
-                ja,
-                suspects.get(5),   // White
-                weapons.get(5),    // Kljuc
-                rooms.get(6));     // Plesnjak
+        // Potez 5: JA sugerišem (White, Kljuc, Plesnjak)
+        //   A preskočio (NoShow), B pokazao MENI -> Reveal(Kljuc)
+        Suggestion sug5 = new Suggestion(ja,
+                suspects.get(5), weapons.get(5), rooms.get(6));
         ks.insert(sug5);
         ks.insert(new NoShow(A, sug5));
-        ks.insert(new Reveal(B, weapons.get(5)));  // B mi je pokazao Kljuc
+        ks.insert(new Reveal(B, weapons.get(5))); // Kljuc
 
-        // ========================================================================
-        // 5. Forward chaining
-        // ========================================================================
+        // ===== Forward chaining =====
         ks.fireAllRules();
         return ks;
     }
@@ -270,7 +245,68 @@ public class ForwardDemoController {
             }
             table.groups.add(group);
         }
+// Tok partije — iz Suggestion + NoShow + PrivateShow + Reveal
+        List<Suggestion> allSuggestions = ks.getObjects(o -> o instanceof Suggestion).stream()
+                .map(o -> (Suggestion) o)
+                .sorted((s1, s2) -> Integer.compare(s1.getTurnNumber(), s2.getTurnNumber()))
+                .collect(Collectors.toList());
 
+        List<NoShow> allNoShows = ks.getObjects(o -> o instanceof NoShow).stream()
+                .map(o -> (NoShow) o).collect(Collectors.toList());
+        List<PrivateShow> allPrivateShows = ks.getObjects(o -> o instanceof PrivateShow).stream()
+                .map(o -> (PrivateShow) o).collect(Collectors.toList());
+
+        table.turns = new ArrayList<>();
+        table.hints = new ArrayList<>();
+
+        for (Suggestion sug : allSuggestions) {
+            PossibilityTable.TurnEntry t = new PossibilityTable.TurnEntry();
+            t.number = sug.getTurnNumber();
+            t.suggester = sug.getSuggester().getName();
+            t.suspect = sug.getSuspect().getName();
+            t.weapon = sug.getWeapon().getName();
+            t.room = sug.getRoom().getName();
+            t.noShowPlayers = allNoShows.stream()
+                    .filter(ns -> ns.getSuggestion() == sug)
+                    .map(ns -> ns.getPlayer().getName())
+                    .collect(Collectors.toList());
+
+            // Da li sam ja postavila sugestiju? Onda vidimo tačnu kartu (Reveal)
+            if (sug.getSuggester().isSelf()) {
+                // Tražimo Reveal koji je relevantan za ovu sugestiju
+                // (heuristika: bilo koji Reveal čija karta je u trojki sugestije)
+                for (Object o : ks.getObjects(x -> x instanceof Reveal)) {
+                    Reveal r = (Reveal) o;
+                    Card c = r.getCard();
+                    if (c.equals(sug.getSuspect()) || c.equals(sug.getWeapon()) || c.equals(sug.getRoom())) {
+                        t.shower = r.getRevealer().getName();
+                        t.revealedCard = c.getName();
+                        t.isPrivate = false;
+                        break;
+                    }
+                }
+            } else {
+                // Inače gledamo PrivateShow
+                for (PrivateShow ps : allPrivateShows) {
+                    if (ps.getSuggestion() == sug) {
+                        t.shower = ps.getShower().getName();
+                        t.shownTo = ps.getRecipient().getName();
+                        t.isPrivate = true;
+                        // Disjunkcija - hint za korisnika
+                        PossibilityTable.DisjunctionEntry d = new PossibilityTable.DisjunctionEntry();
+                        d.player = ps.getShower().getName();
+                        d.candidateCards = Arrays.asList(
+                                sug.getSuspect().getName(),
+                                sug.getWeapon().getName(),
+                                sug.getRoom().getName());
+                        d.turnNumber = sug.getTurnNumber();
+                        table.hints.add(d);
+                        break;
+                    }
+                }
+            }
+            table.turns.add(t);
+        }
         ks.dispose();
         return table;
     }
