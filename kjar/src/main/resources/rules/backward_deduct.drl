@@ -1,0 +1,110 @@
+package rules;
+
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.CardType;
+import com.ftn.sbnz.model.CardScore;
+import com.ftn.sbnz.model.Owns;
+import com.ftn.sbnz.model.NotOwns;
+import com.ftn.sbnz.model.Player;
+import com.ftn.sbnz.model.Reveal;
+import com.ftn.sbnz.model.Solution;
+import com.ftn.sbnz.model.GameResult;
+
+// ============================================================================
+// NIVO 3 - Backward chaining verifikacija rešenja (proposal sekcija 5.3)
+//
+// Drools backward chaining se realizuje kroz query konstrukte. Query je
+// imenovani upit nad radnom memorijom koji može da bude rekurzivan.
+// Cilj se razlaže na podciljeve - tačno kao u proposalu 5.3.2.
+// ============================================================================
+
+
+// ----------------------------------------------------------------------------
+// Podcilj: "Y ∉ Rešenje(K)" - karta Y NIJE u koverti.
+// Iz proposala 5.3.2: dovoljan je bilo koji uslov:
+//   - Y je u rukama nekog igrača (Owns)
+//   - ILI Y je pokazana tokom partije (Reveal)
+//
+// Ovaj query uspeva (vraća red) ako se može dokazati da Y nije rešenje.
+// ----------------------------------------------------------------------------
+query "nijeResenje" (Card $card)
+    (
+        // Uslov 1: kartu poseduje neki igrač
+        Owns(card == $card)
+    ) or (
+        // Uslov 2: karta je pokazana tokom partije
+        Reveal(card == $card)
+    )
+end
+
+
+// ----------------------------------------------------------------------------
+// Podcilj: "Rešenje(K) = X" - karta X JESTE rešenje u svojoj kategoriji.
+// Iz proposala 5.3.2:
+//   X je rešenje akko su SVE ostale karte iste kategorije eliminisane.
+//
+// Realizacija: X je rešenje ako ne postoji druga karta Y iste kategorije
+// za koju NE možemo dokazati da nije rešenje. Drugim rečima - za svaku
+// drugu kartu Y iste kategorije mora da uspe query "nijeResenje".
+// ----------------------------------------------------------------------------
+query "jesteResenje" (Card $card)
+
+    // Dohvati tip karte prosleđene kao argument
+    Card(this == $card, $type: type)
+
+    // Ne sme da postoji druga karta iste kategorije
+    // koja još nije eliminisana
+    not (
+        Card(this != $card, type == $type, $other: this)
+        and
+        not nijeResenje($other;)
+    )
+end
+
+
+// ----------------------------------------------------------------------------
+// Glavni query: "resenje" - dokazuje finalnu trojku (S*, W*, R*).
+// Iz proposala 5.3.1: glavni cilj je dokazan akko su sva tri podcilja TRUE.
+// Query vraća kombinaciju (suspect, weapon, room) koja je rešenje.
+// ----------------------------------------------------------------------------
+query "resenje" (Card $suspect, Card $weapon, Card $room)
+
+    Card(this == $suspect, type == CardType.SUSPECT)
+    jesteResenje($suspect;)
+
+    Card(this == $weapon, type == CardType.WEAPON)
+    jesteResenje($weapon;)
+
+    Card(this == $room, type == CardType.ROOM)
+    jesteResenje($room;)
+end
+
+
+// ----------------------------------------------------------------------------
+// Pravilo koje POKREĆE backward chaining.
+// Poziva glavni query i, ako vrati rešenje, insertuje GameResult i Solution.
+// Iz proposala 5.3.3 - Završna odluka.
+// ----------------------------------------------------------------------------
+rule "5.3.3 - Backward verifikacija: proglasi konacno resenje"
+    when
+        // Query poziv - traži dokazivu trojku (S*, W*, R*)
+        resenje($s, $w, $r;)
+
+        // Da ne pravimo duplikate
+        not GameResult()
+    then
+        GameResult result = new GameResult($s, $w, $r, true);
+
+        insert(result);
+
+        insert(new Solution($s));
+        insert(new Solution($w));
+        insert(new Solution($r));
+
+        System.out.println(
+            "[5.3.3] Backward chaining POTVRDIO resenje: "
+            + $s.getName() + " | "
+            + $w.getName() + " | "
+            + $r.getName()
+        );
+end
