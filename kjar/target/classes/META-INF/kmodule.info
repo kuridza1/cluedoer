@@ -1,0 +1,93 @@
+<org.drools.core.rule.KieModuleMetaInfo>
+  <typeMetaInfos>
+    <entry>
+      <string>com.ftn.sbnz.model.Owns</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.Player</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.Solution</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.Reveal</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.CardScore</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.NotOwns</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.Card</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.NoShow</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+    <entry>
+      <string>com.ftn.sbnz.model.CardType</string>
+      <org.drools.core.rule.TypeMetaInfo>
+        <kind>CLASS</kind>
+        <role>FACT</role>
+        <isDeclaredType>false</isDeclaredType>
+      </org.drools.core.rule.TypeMetaInfo>
+    </entry>
+  </typeMetaInfos>
+  <rulesByPackage>
+    <entry>
+      <string>com.ftn.sbnz.kjar.rules</string>
+      <set>
+        <string>5.1.2d - NoShow -&gt; NotOwns za weapon</string>
+        <string>5.1.2c - Owns(A,X) -&gt; NotOwns(B,X) za sve B != A</string>
+        <string>5.1.3a - Karta koju niko ne poseduje je u koverti</string>
+        <string>5.1.2a - Karta poznatog vlasnika: Score = 0</string>
+        <string>5.1.2b - Reveal -&gt; Owns</string>
+        <string>5.1.2d - NoShow -&gt; NotOwns za room</string>
+        <string>Solution -&gt; NotOwns za sve igraÄ�e</string>
+        <string>5.1.1 - Sopstvena karta: Score = 0</string>
+        <string>5.1.3b - Jedini kandidat u kategoriji je u koverti</string>
+        <string>5.1.2d - NoShow -&gt; NotOwns za suspect</string>
+      </set>
+    </entry>
+  </rulesByPackage>
+</org.drools.core.rule.KieModuleMetaInfo>

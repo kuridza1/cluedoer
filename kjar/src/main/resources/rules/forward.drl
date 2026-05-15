@@ -159,36 +159,6 @@ rule "5.1.3b - Jedini kandidat u kategoriji je u koverti"
                 + " -> Solution(" + $winner.getName() + ")");
 end
 
-// IF igrač A ima N karata AND u koloni A ostalo tačno N nepoznatih spotova
-//    THEN sve te karte ∈ Karte(A)
-// "Nepoznati spot" za igrača A = karta C za koju ne znamo ni Owns(A,C) ni NotOwns(A,C).
-// Ako je broj nepoznatih spotova za A jednak (handSize(A) - broj već poznatih Owns(A,*)),
-// onda sve te nepoznate karte sigurno pripadaju A.
-rule "5.1.3c - Pun broj karata: ostatak nepoznatih pripada igraču"
-    when
-        $p: Player($hand: handSize)
-        // broj karata za koje već znamo da ih A poseduje
-        $known: Number() from accumulate(
-            Owns(player == $p, $c: card),
-            count($c)
-        )
-        // sve "nepoznate" karte za A: ni Owns ni NotOwns
-        $unknown: Number(intValue == ($hand - $known.intValue())) from accumulate(
-            ($card: Card()
-                and not Owns(player == $p, card == $card)
-                and not NotOwns(player == $p, card == $card)),
-            count($card)
-        )
-        // a postoji bar jedna takva nepoznata karta (inače pravilo nema svrhe)
-        $someUnknown: Card()
-        not Owns(player == $p, card == $someUnknown)
-        not NotOwns(player == $p, card == $someUnknown)
-    then
-        insert(new Owns($p, $someUnknown));
-        System.out.println("[5.1.3c] Sve preostale nepoznate karte pripadaju "
-                + $p.getName() + " -> Owns(" + $someUnknown.getName() + ")");
-end
-
 
 // ----------------------------------------------------------------------------
 // Pomoćno pravilo - Solution -> NotOwns za sve igrače
