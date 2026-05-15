@@ -6,4 +6,8 @@
         <ksession name="cluedoKSession"/>
     </kbase>
 
+    <kbase name="cepKBase" packages="cep" eventProcessingMode="stream">
+        <ksession name="cepKSession" type="stateful" clockType="pseudo"/>
+    </kbase>
+
 </kmodule>
