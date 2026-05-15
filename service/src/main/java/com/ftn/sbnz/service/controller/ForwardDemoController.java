@@ -159,6 +159,9 @@ public class ForwardDemoController {
         ks.insert(sug5);
         ks.insert(new NoShow(A, sug5));
         ks.insert(new Reveal(B, weapons.get(5)));  // B mi je pokazao Kljuc
+        ks.insert(new Reveal(A, rooms.get(1)));
+        ks.insert(new Reveal(A, rooms.get(1)));
+        ks.insert(new Reveal(A, rooms.get(1)));
 
         // ========================================================================
         // 5. Forward chaining
@@ -181,6 +184,27 @@ public class ForwardDemoController {
                 .map(Object::toString).sorted().collect(Collectors.toList());
         result.solutions = ks.getObjects(o -> o instanceof Solution).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList());
+        result.gameStates = ks.getObjects(o -> o instanceof GameState)
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        result.priorities = ks.getObjects(o -> o instanceof PriorityCard)
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        result.profiles = ks.getObjects(o -> o instanceof Profile)
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        result.roomFocuses = ks.getObjects(o -> o instanceof RoomFocus)
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        result.strategicRecommendations =
+                ks.getObjects(o -> o instanceof StrategicRecommendation)
+                        .stream()
+                        .map(Object::toString)
+                        .collect(Collectors.toList());
 
         ks.dispose();
         return result;
@@ -280,9 +304,16 @@ public class ForwardDemoController {
     // ========================================================================
     public static class DemoResult {
         public int firedRules;
+
         public List<String> scores;
         public List<String> owns;
         public List<String> notOwns;
         public List<String> solutions;
+
+        public List<String> gameStates;
+        public List<String> priorities;
+        public List<String> profiles;
+        public List<String> roomFocuses;
+        public List<String> strategicRecommendations;
     }
 }

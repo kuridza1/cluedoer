@@ -1,0 +1,208 @@
+package rules;
+
+import com.ftn.sbnz.model.*;
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.CardScore;
+import com.ftn.sbnz.model.Owns;
+import com.ftn.sbnz.model.NotOwns;
+import com.ftn.sbnz.model.Player;
+import com.ftn.sbnz.model.Reveal;
+import com.ftn.sbnz.model.Suggestion;
+import com.ftn.sbnz.model.GameState;
+import com.ftn.sbnz.model.GameStatus;
+import com.ftn.sbnz.model.Profile;
+import com.ftn.sbnz.model.ProfileType;
+import com.ftn.sbnz.model.RoomFocus;
+import com.ftn.sbnz.model.PriorityCard;
+import com.ftn.sbnz.model.StrategicRecommendation;
+import com.ftn.sbnz.model.CardType;
+
+
+// ============================================================================
+// 6.1 - PROCENA STANJA IGRE
+// ============================================================================
+
+rule "6.1 - EARLY GAME"
+when
+    $total: Number() from accumulate(Card($c: this), count($c))
+    $elim: Number() from accumulate(CardScore(score == 0), count(1))
+
+    eval(((double)$elim.intValue() / $total.intValue()) < 0.3)
+
+    not GameState(status == GameStatus.EARLY_GAME)
+then
+    insert(new GameState(GameStatus.EARLY_GAME));
+    System.out.println("GAME STATE -> EARLY");
+end
+
+
+rule "6.1 - MID GAME"
+when
+    $total: Number() from accumulate(Card($c: this), count($c))
+    $elim: Number() from accumulate(CardScore(score == 0), count(1))
+
+    eval(((double)$elim.intValue() / $total.intValue()) >= 0.3 &&
+         ((double)$elim.intValue() / $total.intValue()) <= 0.7)
+
+    not GameState(status == GameStatus.MID_GAME)
+then
+    insert(new GameState(GameStatus.MID_GAME));
+    System.out.println("GAME STATE -> MID");
+end
+
+
+rule "6.1 - LATE GAME"
+when
+    $total: Number() from accumulate(Card($c: this), count($c))
+    $elim: Number() from accumulate(CardScore(score == 0), count(1))
+
+    eval(((double)$elim.intValue() / $total.intValue()) > 0.7)
+
+    not GameState(status == GameStatus.LATE_GAME)
+then
+    insert(new GameState(GameStatus.LATE_GAME));
+    System.out.println("GAME STATE -> LATE");
+end
+
+
+
+// ============================================================================
+// 6.1.1 - PROFILISANJE
+// ============================================================================
+
+// DEFENSIVE (jednostavna verzija za testiranje)
+rule "6.1.1 DEFENSIVE"
+when
+    $p: Player(self == false)
+
+    $c: Card()
+
+    $count: Number(intValue >= 3) from accumulate(
+        Reveal(revealer == $p, card == $c),
+        count(1)
+    )
+
+    not Profile(player == $p, profile == ProfileType.DEFENSIVE)
+then
+    insert(new Profile($p, ProfileType.DEFENSIVE));
+    System.out.println("PROFILE DEFENSIVE -> " + $p.getName());
+end
+
+
+// BLUFFING (ostaje kako imaš logiku)
+rule "6.1.1 BLUFFING"
+when
+    $p: Player(self == false)
+
+    Owns(player == $p, $c: card)
+
+    Suggestion(suggester == $p,
+        (suspect == $c || weapon == $c || room == $c)
+    )
+
+    not Profile(player == $p, profile == ProfileType.BLUFFING)
+then
+    insert(new Profile($p, ProfileType.BLUFFING));
+    System.out.println("PROFILE BLUFFING -> " + $p.getName());
+end
+
+
+// ROOM FOCUS (fix)
+rule "6.1.1 ROOM FOCUS"
+when
+    $p: Player(self == false)
+    $r: Card(type == CardType.ROOM)
+
+    $count: Number(intValue >= 3) from accumulate(
+        Suggestion(suggester == $p, room == $r),
+        count(1)
+    )
+
+    not RoomFocus(player == $p, room == $r)
+then
+    insert(new RoomFocus($p, $r));
+    System.out.println("ROOM FOCUS -> " + $p.getName() + " " + $r.getName());
+end
+
+
+
+// ============================================================================
+// 6.2.1 - PRIORITY SCORE (FIXED GLOBAL MAX)
+// ============================================================================
+rule "6.2.1 GLOBAL MAX SCORE"
+when
+    $best : CardScore(
+        $card : card,
+        $score : score > 0
+    )
+
+    not CardScore(score > $score)
+
+    not PriorityCard(card == $card)
+then
+    insert(new PriorityCard($card));
+    System.out.println("PRIORITY CARD -> " + $card.getName());
+end
+
+
+
+// ============================================================================
+// 6.2.1 STRATEGY - EARLY GAME
+// ============================================================================
+
+rule "6.2.1 EARLY STRATEGY"
+when
+    GameState(status == GameStatus.EARLY_GAME)
+
+    $pc: PriorityCard($card: card)
+
+    not StrategicRecommendation()
+then
+    insert(new StrategicRecommendation(
+        "EARLY GAME: maksimizuj informaciju kroz: " + $card.getName()
+    ));
+
+    System.out.println("STRATEGY EARLY");
+end
+
+
+
+// ============================================================================
+// 6.2.1 STRATEGY - MID GAME (DODATO)
+// ============================================================================
+
+rule "6.2.1 MID STRATEGY"
+when
+    GameState(status == GameStatus.MID_GAME)
+
+    $pc: PriorityCard($card: card)
+
+    not StrategicRecommendation()
+then
+    insert(new StrategicRecommendation(
+        "MID GAME: balansiraj poznato/nepoznato koristeći: " + $card.getName()
+    ));
+
+    System.out.println("STRATEGY MID");
+end
+
+
+
+// ============================================================================
+// 6.2.1 STRATEGY - LATE GAME
+// ============================================================================
+
+rule "6.2.1 LATE STRATEGY"
+when
+    GameState(status == GameStatus.LATE_GAME)
+
+    $pc: PriorityCard($card: card)
+
+    not StrategicRecommendation()
+then
+    insert(new StrategicRecommendation(
+        "LATE GAME: forsiraj eliminaciju i test: " + $card.getName()
+    ));
+
+    System.out.println("STRATEGY LATE");
+end
