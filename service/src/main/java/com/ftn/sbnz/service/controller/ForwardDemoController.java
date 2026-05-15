@@ -194,7 +194,6 @@ public class ForwardDemoController {
         result.strategicRecommendations = ks.getObjects(o -> o instanceof StrategicRecommendation).stream()
                 .map(Object::toString).collect(Collectors.toList());
 
-        // Novo: rizici i preporuke za pokazivanje (6.2.2, 6.2.3)
         result.riskWarnings = ks.getObjects(o -> o instanceof RiskWarning).stream()
                 .map(Object::toString).collect(Collectors.toList());
 
@@ -203,6 +202,12 @@ public class ForwardDemoController {
 
         result.suggestCards = ks.getObjects(o -> o instanceof SuggestCard).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList());
+
+        result.highSuspicions = ks.getObjects(o -> o instanceof HighSuspicion).stream()
+                .map(Object::toString).collect(Collectors.toList());
+
+        result.knowsCards = ks.getObjects(o -> o instanceof KnowsCard).stream()
+                .map(Object::toString).collect(Collectors.toList());
 
         ks.dispose();
         return result;
@@ -308,8 +313,10 @@ public class ForwardDemoController {
         public List<String> profiles;
         public List<String> roomFocuses;
         public List<String> strategicRecommendations;
-        public List<String> riskWarnings;         // novo - 6.2.3
-        public List<String> showRecommendations;  // novo - 6.2.2
-        public List<String> suggestCards;           // novo - preporucena trojka (S,W,R)
+        public List<String> riskWarnings;
+        public List<String> showRecommendations;
+        public List<String> suggestCards;
+        public List<String> highSuspicions;
+        public List<String> knowsCards;
     }
 }
