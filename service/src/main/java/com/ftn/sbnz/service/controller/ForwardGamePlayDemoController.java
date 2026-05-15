@@ -25,11 +25,11 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/demo")
-public class ForwardDemoController {
+public class ForwardGamePlayDemoController {
 
     private final KieContainer kieContainer;
 
-    public ForwardDemoController(KieContainer kieContainer) {
+    public ForwardGamePlayDemoController(KieContainer kieContainer) {
         this.kieContainer = kieContainer;
     }
 
