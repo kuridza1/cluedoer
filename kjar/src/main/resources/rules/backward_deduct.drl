@@ -12,20 +12,34 @@ import com.ftn.sbnz.model.GameResult;
 
 // ============================================================================
 // NIVO 3 - Backward chaining verifikacija rešenja (proposal sekcija 5.3)
-//
-// Drools backward chaining se realizuje kroz query konstrukte. Query je
-// imenovani upit nad radnom memorijom koji može da bude rekurzivan.
-// Cilj se razlaže na podciljeve - tačno kao u proposalu 5.3.2.
 // ============================================================================
 
 
 // ----------------------------------------------------------------------------
+// Pomoćni query: "sviIgraciNeposeduju" - karta Y NIJE u rukama nijednog igrača.
+// Za svakog igrača P u radnoj memoriji mora postojati NotOwns(P, Y).
+// ----------------------------------------------------------------------------
+query "sviIgraciNeposeduju" (Card $card)
+    // Ne sme da postoji igrač P za kojeg NE znamo NotOwns(P, $card)
+    not (
+        Player($p: this)
+        and
+        not NotOwns(player == $p, card == $card)
+    )
+end
+
+
+// ----------------------------------------------------------------------------
 // Podcilj: "Y ∉ Rešenje(K)" - karta Y NIJE u koverti.
-// Iz proposala 5.3.2: dovoljan je bilo koji uslov:
-//   - Y je u rukama nekog igrača (Owns)
-//   - ILI Y je pokazana tokom partije (Reveal)
+// Iz proposala 5.3.2 prošireno:
+//   - Y je u rukama nekog igrača (Owns), ILI
+//   - Y je pokazana tokom partije (Reveal), ILI
+//   - Za svakog igrača znamo NotOwns(P, Y) - dakle Y mora biti u koverti...
+//     ali za eliminaciju Y kao kandidata za neku DRUGU poziciju, dovoljno je
+//     da je dokažemo nekim od ova tri uslova
 //
-// Ovaj query uspeva (vraća red) ako se može dokazati da Y nije rešenje.
+// VAŽNO: treći uslov pravi "obrnutu" deduktivnu putanju - ako za sve karte iste
+// kategorije osim X znamo da ih niko ne poseduje, X mora biti rešenje.
 // ----------------------------------------------------------------------------
 query "nijeResenje" (Card $card)
     (
@@ -34,22 +48,24 @@ query "nijeResenje" (Card $card)
     ) or (
         // Uslov 2: karta je pokazana tokom partije
         Reveal(card == $card)
+    ) or (
+        // Uslov 3: za svakog igrača imamo NotOwns za ovu kartu
+        // (znači karta nije ni u jednoj ruci -> mora biti u koverti, ali
+        // to je ipak validan dokaz da nije "rešenje neke druge karte")
+        // NAPOMENA: ovaj uslov se koristi i kad karta JESTE u koverti -
+        // tada nije rešenje drugih kategorija. Eliminacija u jesteResenje
+        // se oslanja na to da je tačno jedna karta po kategoriji preostala.
+        sviIgraciNeposeduju($card;)
     )
 end
 
 
 // ----------------------------------------------------------------------------
 // Podcilj: "Rešenje(K) = X" - karta X JESTE rešenje u svojoj kategoriji.
-// Iz proposala 5.3.2:
-//   X je rešenje akko su SVE ostale karte iste kategorije eliminisane.
-//
-// Realizacija: X je rešenje ako ne postoji druga karta Y iste kategorije
-// za koju NE možemo dokazati da nije rešenje. Drugim rečima - za svaku
-// drugu kartu Y iste kategorije mora da uspe query "nijeResenje".
+// X je rešenje akko su SVE ostale karte iste kategorije eliminisane.
 // ----------------------------------------------------------------------------
 query "jesteResenje" (Card $card)
 
-    // Dohvati tip karte prosleđene kao argument
     Card(this == $card, $type: type)
 
     // Ne sme da postoji druga karta iste kategorije
@@ -64,8 +80,6 @@ end
 
 // ----------------------------------------------------------------------------
 // Glavni query: "resenje" - dokazuje finalnu trojku (S*, W*, R*).
-// Iz proposala 5.3.1: glavni cilj je dokazan akko su sva tri podcilja TRUE.
-// Query vraća kombinaciju (suspect, weapon, room) koja je rešenje.
 // ----------------------------------------------------------------------------
 query "resenje" (Card $suspect, Card $weapon, Card $room)
 
@@ -82,15 +96,10 @@ end
 
 // ----------------------------------------------------------------------------
 // Pravilo koje POKREĆE backward chaining.
-// Poziva glavni query i, ako vrati rešenje, insertuje GameResult i Solution.
-// Iz proposala 5.3.3 - Završna odluka.
 // ----------------------------------------------------------------------------
 rule "5.3.3 - Backward verifikacija: proglasi konacno resenje"
     when
-        // Query poziv - traži dokazivu trojku (S*, W*, R*)
         resenje($s, $w, $r;)
-
-        // Da ne pravimo duplikate
         not GameResult()
     then
         GameResult result = new GameResult($s, $w, $r, true);

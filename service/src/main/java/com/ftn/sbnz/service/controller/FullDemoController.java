@@ -55,31 +55,31 @@ public class FullDemoController {
         // 1. Karte (pun Cluedo skup)
         // ====================================================================
         List<Card> suspects = Arrays.asList(
-                new Card(CardType.SUSPECT, "Scarlet"),
-                new Card(CardType.SUSPECT, "Mustard"),
                 new Card(CardType.SUSPECT, "Green"),
-                new Card(CardType.SUSPECT, "Plum"),
+                new Card(CardType.SUSPECT, "Mustard"),
                 new Card(CardType.SUSPECT, "Peacock"),
+                new Card(CardType.SUSPECT, "Plum"),
+                new Card(CardType.SUSPECT, "Scarlet"),
                 new Card(CardType.SUSPECT, "White")
-        );
+                );
         List<Card> weapons = Arrays.asList(
-                new Card(CardType.WEAPON, "Bodez"),
                 new Card(CardType.WEAPON, "Svecnjak"),
+                new Card(CardType.WEAPON, "Bodez"),
                 new Card(CardType.WEAPON, "Revolver"),
-                new Card(CardType.WEAPON, "Konopac"),
                 new Card(CardType.WEAPON, "OlovnaCev"),
+                new Card(CardType.WEAPON, "Konopac"),
                 new Card(CardType.WEAPON, "Kljuc")
         );
         List<Card> rooms = Arrays.asList(
-                new Card(CardType.ROOM, "Kuhinja"),
-                new Card(CardType.ROOM, "Salon"),
-                new Card(CardType.ROOM, "Trpezarija"),
-                new Card(CardType.ROOM, "Biblioteka"),
-                new Card(CardType.ROOM, "RadnaSoba"),
-                new Card(CardType.ROOM, "BilijarSoba"),
+                new Card(CardType.ROOM, "Trem"),
                 new Card(CardType.ROOM, "Plesnjak"),
+                new Card(CardType.ROOM, "Kuhinja"),
+                new Card(CardType.ROOM, "Trpezarija"),
+                new Card(CardType.ROOM, "Salon"),
                 new Card(CardType.ROOM, "Hodnik"),
-                new Card(CardType.ROOM, "Trem")
+                new Card(CardType.ROOM, "RadnaSoba"),
+                new Card(CardType.ROOM, "Biblioteka"),
+                new Card(CardType.ROOM, "BilijarSoba")
         );
         List<Card> allCards = new ArrayList<>();
         allCards.addAll(suspects);
@@ -90,9 +90,7 @@ public class FullDemoController {
             ks.insert(new CardScore(c, 1));
         }
 
-        // ====================================================================
-        // 2. Igrači
-        // ====================================================================
+
         Player ja = new Player("Ja", 3, true);
         Player A = new Player("A", 3, false);
         Player B = new Player("B", 3, false);
@@ -102,100 +100,166 @@ public class FullDemoController {
         ks.insert(ja); ks.insert(A); ks.insert(B);
         ks.insert(C); ks.insert(D); ks.insert(E);
 
-        // ====================================================================
-        // 3. Moje karte
-        // ====================================================================
-        ks.insert(new Owns(ja, suspects.get(0))); // Scarlet
-        ks.insert(new Owns(ja, weapons.get(0)));  // Bodez
-        ks.insert(new Owns(ja, rooms.get(0)));    // Kuhinja
 
-        System.out.println(">>> Faza 1: Inicijalna pravila (sopstvene karte)");
+        ks.insert(new Owns(ja, suspects.get(4))); // Scarlet
+        ks.insert(new Owns(ja, weapons.get(1)));  // Bodez
+        ks.insert(new Owns(ja, rooms.get(2)));    // Kuhinja
+
         int firedInit = ks.fireAllRules();
-        System.out.println("    Aktivirano pravila: " + firedInit);
 
-        // ====================================================================
-        // 4. Tok partije sa pseudo-clock-om
-        // ====================================================================
-        System.out.println(">>> Faza 2: Tok partije (7 sugestija)");
 
         long t = clock.getCurrentTime();
-        Suggestion sug1 = new Suggestion(1, t, A, suspects.get(1), weapons.get(1), rooms.get(1));
+        Suggestion sug1 = new Suggestion(1, t, A, suspects.get(0), weapons.get(0), rooms.get(0));
         ks.insert(sug1);
         ks.insert(new NoShow(B, sug1, t));
         ks.insert(new PrivateShow(C, A, sug1, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f1 = ks.fireAllRules();
-        System.out.println("    Posle poteza 1: " + f1 + " pravila");
 
         t = clock.getCurrentTime();
-        Suggestion sug2 = new Suggestion(2, t, B, suspects.get(3), weapons.get(3), rooms.get(3));
+        Suggestion sug2 = new Suggestion(2, t, B, suspects.get(1), weapons.get(1), rooms.get(1));
         ks.insert(sug2);
-        ks.insert(new NoShow(C, sug2, t));
-        ks.insert(new PrivateShow(D, B, sug2, t));
+        ks.insert(new PrivateShow(C, B, sug2, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f2 = ks.fireAllRules();
-        System.out.println("    Posle poteza 2: " + f2 + " pravila");
 
         t = clock.getCurrentTime();
-        Suggestion sug3 = new Suggestion(3, t, C, suspects.get(2), weapons.get(4), rooms.get(4));
+        Suggestion sug3 = new Suggestion(3, t, C, suspects.get(1), weapons.get(0), rooms.get(0));
         ks.insert(sug3);
-        ks.insert(new NoShow(D, sug3, t));
-        ks.insert(new NoShow(E, sug3, t));
-        ks.insert(new NoShow(ja, sug3, t));
+        ks.insert(new PrivateShow(D, C, sug3, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f3 = ks.fireAllRules();
-        System.out.println("    Posle poteza 3: " + f3 + " pravila");
 
         t = clock.getCurrentTime();
-        Suggestion sug4 = new Suggestion(4, t, D, suspects.get(3), weapons.get(3), rooms.get(2));
+        Suggestion sug4 = new Suggestion(4, t, D, suspects.get(2), weapons.get(0), rooms.get(2));
         ks.insert(sug4);
-        ks.insert(new PrivateShow(E, D, sug4, t));
+        ks.insert(new NoShow(E, sug4, t));
+        ks.insert(new Reveal(ja, rooms.get(2), t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f4 = ks.fireAllRules();
-        System.out.println("    Posle poteza 4: " + f4 + " pravila");
 
         t = clock.getCurrentTime();
-        Suggestion sug5 = new Suggestion(5, t, E, suspects.get(4), weapons.get(3), rooms.get(6));
+        Suggestion sug5 = new Suggestion(5, t, E, suspects.get(3), weapons.get(0), rooms.get(3));
         ks.insert(sug5);
         ks.insert(new NoShow(ja, sug5, t));
         ks.insert(new PrivateShow(A, E, sug5, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f5 = ks.fireAllRules();
-        System.out.println("    Posle poteza 5: " + f5 + " pravila");
 
         t = clock.getCurrentTime();
-        Suggestion sug6 = new Suggestion(6, t, ja, suspects.get(4), weapons.get(2), rooms.get(3));
+        Suggestion sug6 = new Suggestion(6, t, ja, suspects.get(0), weapons.get(5), rooms.get(7));
         ks.insert(sug6);
         ks.insert(new NoShow(A, sug6, t));
-        ks.insert(new Reveal(B, rooms.get(3), t));
+        ks.insert(new NoShow(B, sug6, t));
+        ks.insert(new Reveal(C, weapons.get(5)));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f6 = ks.fireAllRules();
-        System.out.println("    Posle poteza 6: " + f6 + " pravila");
 
         t = clock.getCurrentTime();
-        Suggestion sug7 = new Suggestion(7, t, ja, suspects.get(5), weapons.get(5), rooms.get(7));
+        Suggestion sug7 = new Suggestion(7, t, A, suspects.get(0), weapons.get(0), rooms.get(1));
         ks.insert(sug7);
-        ks.insert(new NoShow(A, sug7, t));
         ks.insert(new NoShow(B, sug7, t));
-        ks.insert(new Reveal(C, weapons.get(5), t));
+        ks.insert(new NoShow(C, sug7, t));
+        ks.insert(new PrivateShow(D, A, sug7, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f7 = ks.fireAllRules();
-        System.out.println("    Posle poteza 7: " + f7 + " pravila");
 
-        // ====================================================================
-        // 5. Eksplicitno pokreni backward chaining query
-        // ====================================================================
-        System.out.println(">>> Faza 3: Backward chaining (poziv query 'resenje')");
+        t = clock.getCurrentTime();
+        Suggestion sug8 = new Suggestion(8, t, B, suspects.get(2), weapons.get(1), rooms.get(1));
+        ks.insert(sug8);
+        ks.insert(new NoShow(C, sug8, t));
+        ks.insert(new NoShow(D, sug8, t));
+        ks.insert(new NoShow(E, sug8, t));
+        ks.insert(new Reveal(ja, weapons.get(1)));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f8 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug9 = new Suggestion(9, t, C, suspects.get(1), weapons.get(3), rooms.get(0));
+        ks.insert(sug9);
+        ks.insert(new NoShow(D, sug9, t));
+        ks.insert(new NoShow(E, sug9, t));
+        ks.insert(new NoShow(ja, sug9, t));
+        ks.insert(new NoShow(A, sug9, t));
+        ks.insert(new PrivateShow(B, C, sug9, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f9 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug10 = new Suggestion(10, t, D, suspects.get(3), weapons.get(4), rooms.get(6));
+        ks.insert(sug10);
+        ks.insert(new PrivateShow(E, D, sug10, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f10 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug11 = new Suggestion(11, t, E, suspects.get(2), weapons.get(4), rooms.get(8));
+        ks.insert(sug11);
+        ks.insert(new NoShow(ja, sug11, t));
+        ks.insert(new PrivateShow(A, E, sug11, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f11 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug12 = new Suggestion(12, t, ja, suspects.get(0), weapons.get(1), rooms.get(2));
+        ks.insert(sug12);
+        ks.insert(new NoShow(A, sug12, t));
+        ks.insert(new NoShow(B, sug12, t));
+        ks.insert(new NoShow(C, sug12, t));
+        ks.insert(new NoShow(D, sug12, t));
+        ks.insert(new NoShow(E, sug12, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f12= ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug13 = new Suggestion(13, t, A, suspects.get(0), weapons.get(2), rooms.get(8));
+// A: Green, Revolver, BilijarSoba
+        ks.insert(sug13);
+        ks.insert(new PrivateShow(B, A, sug13, t));   // B pokazuje BilijarSoba
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f13 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug14 = new Suggestion(14, t, B, suspects.get(0), weapons.get(2), rooms.get(5));
+// B: Green, Revolver, Hodnik
+        ks.insert(sug14);
+        ks.insert(new NoShow(C, sug14, t));
+        ks.insert(new PrivateShow(D, B, sug14, t));   // D pokazuje Hodnik
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f14 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug15 = new Suggestion(15, t, C, suspects.get(0), weapons.get(2), rooms.get(3));
+// C: Green, Revolver, Trpezarija
+        ks.insert(sug15);
+        ks.insert(new PrivateShow(A, C, sug15, t));   // A pokazuje Trpezarija
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f15 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug16 = new Suggestion(16, t, D, suspects.get(0), weapons.get(2), rooms.get(7));
+// D: Green, Revolver, Biblioteka
+        ks.insert(sug16);
+        ks.insert(new PrivateShow(E, D, sug16, t));   // E pokazuje Biblioteka
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f16 = ks.fireAllRules();
+
+        t = clock.getCurrentTime();
+        Suggestion sug17 = new Suggestion(17, t, E, suspects.get(0), weapons.get(2), rooms.get(6));
+// E: Green, Revolver, RadnaSoba — svi NoShow jer E ima RadnaSoba u rukama
+        ks.insert(sug17);
+        ks.insert(new NoShow(ja, sug17, t));
+        ks.insert(new NoShow(A, sug17, t));
+        ks.insert(new NoShow(B, sug17, t));
+        ks.insert(new NoShow(C, sug17, t));
+        ks.insert(new NoShow(D, sug17, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        int f17 = ks.fireAllRules();
+
         boolean backwardSolved = runBackwardQuery(ks);
-        System.out.println("    Backward verifikacija " + (backwardSolved
-                ? "USPEŠNA - rešenje proglašeno" : "NEUSPEŠNA - nedovoljno informacija"));
 
-        // ====================================================================
-        // 6. Skupljanje izlaza
-        // ====================================================================
         Map<String, Object> result = new HashMap<>();
 
-        // --- Knowledge Snapshot (proposal 3.3 / 3.5) ---
         Map<String, Object> snapshot = new HashMap<>();
         snapshot.put("scores", ks.getObjects(o -> o instanceof CardScore).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList()));
@@ -210,7 +274,6 @@ public class FullDemoController {
         snapshot.put("backwardSolved", backwardSolved);
         result.put("knowledgeSnapshot", snapshot);
 
-        // --- Strategic Output (proposal 3.6) ---
         Map<String, Object> strategic = new HashMap<>();
         strategic.put("gameStates", ks.getObjects(o -> o instanceof GameState).stream()
                 .map(Object::toString).collect(Collectors.toList()));
@@ -234,13 +297,11 @@ public class FullDemoController {
                 .map(Object::toString).collect(Collectors.toList()));
         result.put("strategicOutput", strategic);
 
-        // --- Tabela mogućnosti + tok + slabe činjenice ---
         result.put("table", buildTable(ks));
 
-        // --- Dijagnostika ---
         Map<String, Object> diagnostics = new HashMap<>();
-        diagnostics.put("totalRulesFired", firedInit + f1 + f2 + f3 + f4 + f5 + f6 + f7);
-        diagnostics.put("rulesPerPhase", Arrays.asList(firedInit, f1, f2, f3, f4, f5, f6, f7));
+        diagnostics.put("totalRulesFired", firedInit + f1 + f2 + f3 + f4 + f5 );
+        diagnostics.put("rulesPerPhase", Arrays.asList(firedInit, f1, f2, f3, f4, f5));
         diagnostics.put("backwardChainingTriggered", backwardSolved);
         result.put("diagnostics", diagnostics);
 
@@ -263,7 +324,12 @@ public class FullDemoController {
      */
     private boolean runBackwardQuery(KieSession ks) {
         try {
-            QueryResults results = ks.getQueryResults("resenje");
+            QueryResults results = ks.getQueryResults(
+                    "resenje",
+                    org.kie.api.runtime.rule.Variable.v,
+                    org.kie.api.runtime.rule.Variable.v,
+                    org.kie.api.runtime.rule.Variable.v
+            );
             if (results.size() == 0) {
                 System.out.println("    Query 'resenje' nije našao rešenje "
                         + "(verovatno nedovoljno karata eliminisano).");

@@ -13,10 +13,6 @@ import com.ftn.sbnz.model.Solution;
 import com.ftn.sbnz.model.Suggestion;
 import com.ftn.sbnz.model.ScoreApplied;
 
-// ============================================================================
-// Event deklaracije
-// ============================================================================
-
 declare Suggestion
     @role(event)
     @timestamp(timestamp)
@@ -39,104 +35,6 @@ declare PrivateShow
     @role(event)
     @timestamp(timestamp)
     @expires(2h)
-end
-
-// ============================================================================
-// NIVO 1 - kopija pravila iz forward.drl
-// ============================================================================
-
-rule "5.1.1 - Sopstvena karta: Score = 0"
-    when
-        $o: Owns($player: player, $card: card)
-        Player(this == $player, self == true)
-        $s: CardScore(card == $card, score != 0)
-    then
-        modify($s) { setScore(0) };
-end
-
-rule "5.1.2a - Karta u igri: Score = 0"
-    when
-        Owns($card: card)
-        $s: CardScore(card == $card, score != 0)
-    then
-        modify($s) { setScore(0) };
-end
-
-rule "5.1.2b - Reveal -> Owns"
-    when
-        $r: Reveal($p: revealer, $c: card)
-        not Owns(player == $p, card == $c)
-    then
-        insert(new Owns($p, $c));
-end
-
-rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
-    when
-        Owns($owner: player, $card: card)
-        $other: Player(this != $owner)
-        not NotOwns(player == $other, card == $card)
-    then
-        insert(new NotOwns($other, $card));
-end
-
-rule "5.1.2d - NoShow -> NotOwns za suspect"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getSuspect()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-end
-
-rule "5.1.2d - NoShow -> NotOwns za weapon"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getWeapon()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-end
-
-rule "5.1.2d - NoShow -> NotOwns za room"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getRoom()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-end
-
-rule "PrivateShow: dve od tri eliminisane -> treca je Owns (suspect ostao)"
-    when
-        PrivateShow($p: shower, $sug: suggestion)
-        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
-        NotOwns(player == $p, card == $wCard)
-        NotOwns(player == $p, card == $rCard)
-        not Owns(player == $p, card == $sCard)
-    then
-        insert(new Owns($p, $sCard));
-end
-
-rule "PrivateShow: dve od tri eliminisane -> treca je Owns (weapon ostao)"
-    when
-        PrivateShow($p: shower, $sug: suggestion)
-        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
-        NotOwns(player == $p, card == $sCard)
-        NotOwns(player == $p, card == $rCard)
-        not Owns(player == $p, card == $wCard)
-    then
-        insert(new Owns($p, $wCard));
-end
-
-rule "PrivateShow: dve od tri eliminisane -> treca je Owns (room ostao)"
-    when
-        PrivateShow($p: shower, $sug: suggestion)
-        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
-        NotOwns(player == $p, card == $sCard)
-        NotOwns(player == $p, card == $wCard)
-        not Owns(player == $p, card == $rCard)
-    then
-        insert(new Owns($p, $rCard));
 end
 
 
@@ -215,23 +113,3 @@ rule "5.2.3c - Karta nikad pokazana posle 6+ poteza -> Score += 1"
                 + $cs.getScore() + ")");
 end
 
-
-// ============================================================================
-// NIVO 2 - sekcija 5.2.4: Ponavljajući obrasci kod igrača
-// ============================================================================
-
-rule "5.2.4 - Tri reveal-a iste prostorije -> sumnja na fokus"
-    when
-        $p: Player()
-        $room: Card(type == CardType.ROOM, $rName: name)
-        Number(intValue >= 3) from accumulate(
-            $r: Reveal(revealer == $p, card == $room) over window:length(10),
-            count($r)
-        )
-        $cs: CardScore(card == $room, score > 0)
-        not ScoreApplied(ruleId == "5.2.4", key == $rName)
-    then
-        modify($cs) { setScore($cs.getScore() + 1) };
-        insert(new ScoreApplied("5.2.4", $rName));
-        System.out.println("[5.2.4] " + $p.getName() + " 3+ puta pokazao " + $rName + " -> Score += 1");
-end
