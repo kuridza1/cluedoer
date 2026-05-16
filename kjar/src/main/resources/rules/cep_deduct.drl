@@ -1,4 +1,4 @@
-package cep;
+package rules;
 
 import com.ftn.sbnz.model.Card;
 import com.ftn.sbnz.model.CardType;
