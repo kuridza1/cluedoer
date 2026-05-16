@@ -1,6 +1,5 @@
 package com.ftn.sbnz.service.controller;
 
-
 import com.ftn.sbnz.model.*;
 import com.ftn.sbnz.model.dto.PossibilityTable;
 import org.kie.api.runtime.KieContainer;
@@ -22,24 +21,32 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * Demo endpoints za CEP (Nivo 2 deduktivnog sistema).
- * GET /api/cep/forward  -> sirovi JSON sa Score-ovima nakon heurističkog skorovanja
- * GET /api/cep/table    -> tabela mogućnosti sa kumulativnim Score-ovima
+ * Finalna integracija: deduktivni Sistem 1 + strateški Sistem 2, sve nivoe.
+ *   Sistem 1 (proposal 5):  forward (5.1) + CEP (5.2) + backward (5.3)
+ *   Sistem 2 (proposal 6):  forward (6.1-6.2) + CEP analiza (6.3) + backward (6.4)
  *
- * Koristi cepKSession iz kmodule.xml (stream mode + pseudo-clock).
+ * Output:
+ *   - knowledgeSnapshot - "Knowledge Snapshot" iz proposala 3.3
+ *   - strategicOutput   - "Strategic Output" iz proposala 3.6
+ *   - table             - tabela mogućnosti sa O/X/?/✓
+ *   - turns             - tok partije
+ *   - hints             - slabe činjenice
+ *
+ * GET /api/full -> kompletan snapshot stanja sistema
  */
 @RestController
-@RequestMapping("/api/cep")
-public class CepDemoController {
+@RequestMapping("/api/full")
+public class FullDemoController {
 
     private final KieContainer kieContainer;
 
-    public CepDemoController(KieContainer kieContainer) {
+    public FullDemoController(KieContainer kieContainer) {
         this.kieContainer = kieContainer;
     }
 
-    private KieSession setupAndFire() {
-        KieSession ks = kieContainer.newKieSession("cepKSession");
+    @GetMapping("")
+    public Map<String, Object> runFullDemo() {
+        KieSession ks = kieContainer.newKieSession("cluedoKSession");
         SessionPseudoClock clock = ks.getSessionClock();
 
         // ===== Karte =====
@@ -70,11 +77,8 @@ public class CepDemoController {
                 new Card(CardType.ROOM, "Hodnik"),
                 new Card(CardType.ROOM, "Trem")
         );
-
         List<Card> allCards = new ArrayList<>();
-        allCards.addAll(suspects);
-        allCards.addAll(weapons);
-        allCards.addAll(rooms);
+        allCards.addAll(suspects); allCards.addAll(weapons); allCards.addAll(rooms);
         for (Card c : allCards) {
             ks.insert(c);
             ks.insert(new CardScore(c, 1));
@@ -91,42 +95,30 @@ public class CepDemoController {
         ks.insert(C); ks.insert(D); ks.insert(E);
 
         // ===== Moje karte =====
-        ks.insert(new Owns(ja, suspects.get(0))); // Scarlet
-        ks.insert(new Owns(ja, weapons.get(0)));  // Bodez
-        ks.insert(new Owns(ja, rooms.get(0)));    // Kuhinja
+        ks.insert(new Owns(ja, suspects.get(0)));
+        ks.insert(new Owns(ja, weapons.get(0)));
+        ks.insert(new Owns(ja, rooms.get(0)));
         ks.fireAllRules();
 
-        // ========================================================================
-        // 7 sugestija - dizajnirano da Score-ovi budu raznoliki
-        // ========================================================================
-
-        // Potez 1: A sugeriše (Mustard, Svecnjak, Salon)
-        //          B preskočio (NoShow), C pokazao A-u (PrivateShow)
+        // ===== Tok partije: 7 sugestija sa CEP event-ima =====
         long t = clock.getCurrentTime();
-        Suggestion sug1 = new Suggestion(1, t, A,
-                suspects.get(1), weapons.get(1), rooms.get(1));
+        Suggestion sug1 = new Suggestion(1, t, A, suspects.get(1), weapons.get(1), rooms.get(1));
         ks.insert(sug1);
         ks.insert(new NoShow(B, sug1, t));
         ks.insert(new PrivateShow(C, A, sug1, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
 
-        // Potez 2: B sugeriše (Plum, Konopac, Biblioteka)  ← Konopac, Plum 1. pojava
-        //          C preskočio, D pokazao B-u (PrivateShow)
         t = clock.getCurrentTime();
-        Suggestion sug2 = new Suggestion(2, t, B,
-                suspects.get(3), weapons.get(3), rooms.get(3));
+        Suggestion sug2 = new Suggestion(2, t, B, suspects.get(3), weapons.get(3), rooms.get(3));
         ks.insert(sug2);
         ks.insert(new NoShow(C, sug2, t));
         ks.insert(new PrivateShow(D, B, sug2, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
 
-        // Potez 3: C sugeriše (Green, OlovnaCev, RadnaSoba)
-        //          SVI preskočili (D, E, Ja) - "blizu istine" -> 5.2.3b okida
         t = clock.getCurrentTime();
-        Suggestion sug3 = new Suggestion(3, t, C,
-                suspects.get(2), weapons.get(4), rooms.get(4));
+        Suggestion sug3 = new Suggestion(3, t, C, suspects.get(2), weapons.get(4), rooms.get(4));
         ks.insert(sug3);
         ks.insert(new NoShow(D, sug3, t));
         ks.insert(new NoShow(E, sug3, t));
@@ -134,74 +126,94 @@ public class CepDemoController {
         clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
 
-        // Potez 4: D sugeriše (Plum, Konopac, Trpezarija)  ← Konopac 2x, Plum 2x
-        //          E pokazao D-u (PrivateShow)
         t = clock.getCurrentTime();
-        Suggestion sug4 = new Suggestion(4, t, D,
-                suspects.get(3), weapons.get(3), rooms.get(2));
+        Suggestion sug4 = new Suggestion(4, t, D, suspects.get(3), weapons.get(3), rooms.get(2));
         ks.insert(sug4);
         ks.insert(new PrivateShow(E, D, sug4, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
 
-        // Potez 5: E sugeriše (Peacock, Konopac, Plesnjak)  ← Konopac 3x ✓ okida 5.2.3a
-        //          Ja preskočila, A pokazao E-u (PrivateShow)
         t = clock.getCurrentTime();
-        Suggestion sug5 = new Suggestion(5, t, E,
-                suspects.get(4), weapons.get(3), rooms.get(6));
+        Suggestion sug5 = new Suggestion(5, t, E, suspects.get(4), weapons.get(3), rooms.get(6));
         ks.insert(sug5);
         ks.insert(new NoShow(ja, sug5, t));
         ks.insert(new PrivateShow(A, E, sug5, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
 
-        // Potez 6: JA sugerišem (Peacock, Revolver, Biblioteka)
-        //          A preskočio, B pokazao MENI Biblioteku -> Reveal (sigurno NIJE u koverti)
         t = clock.getCurrentTime();
-        Suggestion sug6 = new Suggestion(6, t, ja,
-                suspects.get(4), weapons.get(2), rooms.get(3));
+        Suggestion sug6 = new Suggestion(6, t, ja, suspects.get(4), weapons.get(2), rooms.get(3));
         ks.insert(sug6);
         ks.insert(new NoShow(A, sug6, t));
-        ks.insert(new Reveal(B, rooms.get(3), t)); // Biblioteka
+        ks.insert(new Reveal(B, rooms.get(3), t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
 
-        // Potez 7: JA opet sugerišem (White, Kljuc, Hodnik)
-        //          A preskočio, B preskočio, C pokazao MENI Kljuc -> Reveal (sigurno NIJE)
         t = clock.getCurrentTime();
-        Suggestion sug7 = new Suggestion(7, t, ja,
-                suspects.get(5), weapons.get(5), rooms.get(7));
+        Suggestion sug7 = new Suggestion(7, t, ja, suspects.get(5), weapons.get(5), rooms.get(7));
         ks.insert(sug7);
         ks.insert(new NoShow(A, sug7, t));
         ks.insert(new NoShow(B, sug7, t));
-        ks.insert(new Reveal(C, weapons.get(5), t)); // Kljuc
+        ks.insert(new Reveal(C, weapons.get(5), t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
 
-        return ks;
-    }
-    @GetMapping("/forward")
-    public Map<String, Object> runCepDemo() {
-        KieSession ks = setupAndFire();
+        // ====================================================================
+        // Sakupljanje output-a
+        // ====================================================================
 
         Map<String, Object> result = new HashMap<>();
-        result.put("scores", ks.getObjects(o -> o instanceof CardScore).stream()
+
+        // --- Knowledge Snapshot (proposal 3.3 / 3.5) ---
+        Map<String, Object> snapshot = new HashMap<>();
+        snapshot.put("scores", ks.getObjects(o -> o instanceof CardScore).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList()));
-        result.put("owns", ks.getObjects(o -> o instanceof Owns).stream()
+        snapshot.put("owns", ks.getObjects(o -> o instanceof Owns).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList()));
-        result.put("notOwns", ks.getObjects(o -> o instanceof NotOwns).stream()
+        snapshot.put("notOwns", ks.getObjects(o -> o instanceof NotOwns).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList()));
-        result.put("solutions", ks.getObjects(o -> o instanceof Solution).stream()
+        snapshot.put("solutions", ks.getObjects(o -> o instanceof Solution).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList()));
+        snapshot.put("gameResult", ks.getObjects(o -> o instanceof GameResult).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        result.put("knowledgeSnapshot", snapshot);
+
+        // --- Strategic Output (proposal 3.6) ---
+        Map<String, Object> strategic = new HashMap<>();
+        strategic.put("gameStates", ks.getObjects(o -> o instanceof GameState).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("profiles", ks.getObjects(o -> o instanceof Profile).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("roomFocuses", ks.getObjects(o -> o instanceof RoomFocus).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("recommendations", ks.getObjects(o -> o instanceof StrategicRecommendation).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("riskWarnings", ks.getObjects(o -> o instanceof RiskWarning).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("showRecommendations", ks.getObjects(o -> o instanceof ShowRecommendation).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("suggestCards", ks.getObjects(o -> o instanceof SuggestCard).stream()
+                .map(Object::toString).sorted().collect(Collectors.toList()));
+        strategic.put("highSuspicions", ks.getObjects(o -> o instanceof HighSuspicion).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("knowsCards", ks.getObjects(o -> o instanceof KnowsCard).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        strategic.put("optimalActions", ks.getObjects(o -> o instanceof OptimalAction).stream()
+                .map(Object::toString).collect(Collectors.toList()));
+        result.put("strategicOutput", strategic);
+
+        // --- Tabela mogućnosti + tok + slabe činjenice ---
+        result.put("table", buildTable(ks));
 
         ks.dispose();
         return result;
     }
 
-    @GetMapping("/table")
-    public PossibilityTable runCepTable() {
-        KieSession ks = setupAndFire();
-
+    /**
+     * Pomoćna metoda - gradi PossibilityTable iz radne memorije.
+     * Ista logika kao u drugim kontrolerima, ali ovde reuse za /api/full.
+     */
+    private PossibilityTable buildTable(KieSession ks) {
         List<Card> allCardsList = ks.getObjects(o -> o instanceof Card).stream()
                 .map(o -> (Card) o).collect(Collectors.toList());
 
@@ -275,12 +287,12 @@ public class CepDemoController {
             }
             table.groups.add(group);
         }
-// ===== Tok partije i slabe činjenice =====
+
+        // Tok + hints
         List<Suggestion> allSuggestions = ks.getObjects(o -> o instanceof Suggestion).stream()
                 .map(o -> (Suggestion) o)
                 .sorted((s1, s2) -> Integer.compare(s1.getTurnNumber(), s2.getTurnNumber()))
                 .collect(Collectors.toList());
-
         List<NoShow> allNoShows = ks.getObjects(o -> o instanceof NoShow).stream()
                 .map(o -> (NoShow) o).collect(Collectors.toList());
         List<PrivateShow> allPrivateShows = ks.getObjects(o -> o instanceof PrivateShow).stream()
@@ -304,7 +316,6 @@ public class CepDemoController {
                     .collect(Collectors.toList());
 
             if (sug.getSuggester().isSelf()) {
-                // Ja sugerišem -> tražim Reveal za neku od tri karte iz ove sugestije
                 for (Reveal r : allReveals) {
                     Card c = r.getCard();
                     if (c.equals(sug.getSuspect()) || c.equals(sug.getWeapon()) || c.equals(sug.getRoom())) {
@@ -315,7 +326,6 @@ public class CepDemoController {
                     }
                 }
             } else {
-                // Drugi sugeriše -> tražim PrivateShow
                 for (PrivateShow ps : allPrivateShows) {
                     if (ps.getSuggestion() == sug) {
                         t.shower = ps.getShower().getName();
@@ -336,7 +346,7 @@ public class CepDemoController {
             }
             table.turns.add(t);
         }
-        ks.dispose();
+
         return table;
     }
 }

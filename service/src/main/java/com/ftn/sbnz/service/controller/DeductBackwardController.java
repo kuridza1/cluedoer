@@ -22,12 +22,12 @@ import java.util.stream.Collectors;
  * je eliminisano da backward chaining može da potvrdi finalnu trojku.
  */
 @RestController
-@RequestMapping("/api/backward")
-public class BackwardDeductDemoController {
+@RequestMapping("/api/deduct/backward")
+public class DeductBackwardController {
 
     private final KieContainer kieContainer;
 
-    public BackwardDeductDemoController(KieContainer kieContainer) {
+    public DeductBackwardController(KieContainer kieContainer) {
         this.kieContainer = kieContainer;
     }
 

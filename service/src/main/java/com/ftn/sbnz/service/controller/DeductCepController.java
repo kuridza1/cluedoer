@@ -1,9 +1,11 @@
 package com.ftn.sbnz.service.controller;
 
+
 import com.ftn.sbnz.model.*;
 import com.ftn.sbnz.model.dto.PossibilityTable;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
+import org.kie.api.time.SessionPseudoClock;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,29 +18,29 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * Demo endpoints za Nivo 1 forward chaining.
- * GET /api/demo/forward  -> sirovi JSON (scores, owns, notOwns, solutions)
- * GET /api/demo/table    -> strukturirana tabela mogućnosti
+ * Demo endpoints za CEP (Nivo 2 deduktivnog sistema).
+ * GET /api/cep/forward  -> sirovi JSON sa Score-ovima nakon heurističkog skorovanja
+ * GET /api/cep/table    -> tabela mogućnosti sa kumulativnim Score-ovima
+ *
+ * Koristi cepKSession iz kmodule.xml (stream mode + pseudo-clock).
  */
 @RestController
-@RequestMapping("/api/demo")
-public class ForwardGamePlayDemoController {
+@RequestMapping("/api/deduct/cep")
+public class DeductCepController {
 
     private final KieContainer kieContainer;
 
-    public ForwardGamePlayDemoController(KieContainer kieContainer) {
+    public DeductCepController(KieContainer kieContainer) {
         this.kieContainer = kieContainer;
     }
 
-    // ========================================================================
-    // Setup logika - kreira sesiju, ubacuje sve činjenice, pokreće pravila.
-    // Vraća sesiju spremnu za ispitivanje.
-    // ========================================================================
     private KieSession setupAndFire() {
-        KieSession ks = kieContainer.newKieSession("cluedoKSession");
+        KieSession ks = kieContainer.newKieSession("cepKSession");
+        SessionPseudoClock clock = ks.getSessionClock();
 
         // ===== Karte =====
         List<Card> suspects = Arrays.asList(
@@ -73,7 +75,6 @@ public class ForwardGamePlayDemoController {
         allCards.addAll(suspects);
         allCards.addAll(weapons);
         allCards.addAll(rooms);
-
         for (Card c : allCards) {
             ks.insert(c);
             ks.insert(new CardScore(c, 1));
@@ -86,7 +87,6 @@ public class ForwardGamePlayDemoController {
         Player C = new Player("C", 3, false);
         Player D = new Player("D", 3, false);
         Player E = new Player("E", 3, false);
-
         ks.insert(ja); ks.insert(A); ks.insert(B);
         ks.insert(C); ks.insert(D); ks.insert(E);
 
@@ -94,82 +94,117 @@ public class ForwardGamePlayDemoController {
         ks.insert(new Owns(ja, suspects.get(0))); // Scarlet
         ks.insert(new Owns(ja, weapons.get(0)));  // Bodez
         ks.insert(new Owns(ja, rooms.get(0)));    // Kuhinja
+        ks.fireAllRules();
 
         // ========================================================================
-        // Tok partije
+        // 7 sugestija - dizajnirano da Score-ovi budu raznoliki
         // ========================================================================
 
         // Potez 1: A sugeriše (Mustard, Svecnjak, Salon)
-        //   B preskočio (NoShow), C pokazao A-u (PrivateShow)
-        Suggestion sug1 = new Suggestion(A,
+        //          B preskočio (NoShow), C pokazao A-u (PrivateShow)
+        long t = clock.getCurrentTime();
+        Suggestion sug1 = new Suggestion(1, t, A,
                 suspects.get(1), weapons.get(1), rooms.get(1));
         ks.insert(sug1);
-        ks.insert(new NoShow(B, sug1));
-        ks.insert(new PrivateShow(C, A, sug1));
-
-        // Potez 2: B sugeriše (Green, Konopac, Biblioteka)
-        //   C pokazao B-u (PrivateShow)
-        Suggestion sug2 = new Suggestion(B,
-                suspects.get(2), weapons.get(3), rooms.get(3));
-        ks.insert(sug2);
-        ks.insert(new PrivateShow(C, B, sug2));
-
-        // Potez 3: D sugeriše (Plum, OlovnaCev, RadnaSoba)
-        //   E pokazao D-u (PrivateShow)
-        Suggestion sug3 = new Suggestion(D,
-                suspects.get(3), weapons.get(4), rooms.get(4));
-        ks.insert(sug3);
-        ks.insert(new PrivateShow(E, D, sug3));
-
-        // Potez 4: E sugeriše (Peacock, Revolver, BilijarSoba)
-        //   Ja preskočila (NoShow), A pokazao E-u (PrivateShow)
-        Suggestion sug4 = new Suggestion(E,
-                suspects.get(4), weapons.get(2), rooms.get(5));
-        ks.insert(sug4);
-        ks.insert(new NoShow(ja, sug4));
-        ks.insert(new PrivateShow(A, E, sug4));
-
-        // Potez 5: JA sugerišem (White, Kljuc, Plesnjak)
-        //   A preskočio (NoShow), B pokazao MENI -> Reveal(Kljuc)
-        Suggestion sug5 = new Suggestion(ja,
-                suspects.get(5), weapons.get(5), rooms.get(6));
-        ks.insert(sug5);
-        ks.insert(new NoShow(A, sug5));
-        ks.insert(new Reveal(B, weapons.get(5))); // Kljuc
-
-        // ===== Forward chaining =====
+        ks.insert(new NoShow(B, sug1, t));
+        ks.insert(new PrivateShow(C, A, sug1, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
         ks.fireAllRules();
+
+        // Potez 2: B sugeriše (Plum, Konopac, Biblioteka)  ← Konopac, Plum 1. pojava
+        //          C preskočio, D pokazao B-u (PrivateShow)
+        t = clock.getCurrentTime();
+        Suggestion sug2 = new Suggestion(2, t, B,
+                suspects.get(3), weapons.get(3), rooms.get(3));
+        ks.insert(sug2);
+        ks.insert(new NoShow(C, sug2, t));
+        ks.insert(new PrivateShow(D, B, sug2, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        ks.fireAllRules();
+
+        // Potez 3: C sugeriše (Green, OlovnaCev, RadnaSoba)
+        //          SVI preskočili (D, E, Ja) - "blizu istine" -> 5.2.3b okida
+        t = clock.getCurrentTime();
+        Suggestion sug3 = new Suggestion(3, t, C,
+                suspects.get(2), weapons.get(4), rooms.get(4));
+        ks.insert(sug3);
+        ks.insert(new NoShow(D, sug3, t));
+        ks.insert(new NoShow(E, sug3, t));
+        ks.insert(new NoShow(ja, sug3, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        ks.fireAllRules();
+
+        // Potez 4: D sugeriše (Plum, Konopac, Trpezarija)  ← Konopac 2x, Plum 2x
+        //          E pokazao D-u (PrivateShow)
+        t = clock.getCurrentTime();
+        Suggestion sug4 = new Suggestion(4, t, D,
+                suspects.get(3), weapons.get(3), rooms.get(2));
+        ks.insert(sug4);
+        ks.insert(new PrivateShow(E, D, sug4, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        ks.fireAllRules();
+
+        // Potez 5: E sugeriše (Peacock, Konopac, Plesnjak)  ← Konopac 3x ✓ okida 5.2.3a
+        //          Ja preskočila, A pokazao E-u (PrivateShow)
+        t = clock.getCurrentTime();
+        Suggestion sug5 = new Suggestion(5, t, E,
+                suspects.get(4), weapons.get(3), rooms.get(6));
+        ks.insert(sug5);
+        ks.insert(new NoShow(ja, sug5, t));
+        ks.insert(new PrivateShow(A, E, sug5, t));
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        ks.fireAllRules();
+
+        // Potez 6: JA sugerišem (Peacock, Revolver, Biblioteka)
+        //          A preskočio, B pokazao MENI Biblioteku -> Reveal (sigurno NIJE u koverti)
+        t = clock.getCurrentTime();
+        Suggestion sug6 = new Suggestion(6, t, ja,
+                suspects.get(4), weapons.get(2), rooms.get(3));
+        ks.insert(sug6);
+        ks.insert(new NoShow(A, sug6, t));
+        ks.insert(new Reveal(B, rooms.get(3), t)); // Biblioteka
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        ks.fireAllRules();
+
+        // Potez 7: JA opet sugerišem (White, Kljuc, Hodnik)
+        //          A preskočio, B preskočio, C pokazao MENI Kljuc -> Reveal (sigurno NIJE)
+        t = clock.getCurrentTime();
+        Suggestion sug7 = new Suggestion(7, t, ja,
+                suspects.get(5), weapons.get(5), rooms.get(7));
+        ks.insert(sug7);
+        ks.insert(new NoShow(A, sug7, t));
+        ks.insert(new NoShow(B, sug7, t));
+        ks.insert(new Reveal(C, weapons.get(5), t)); // Kljuc
+        clock.advanceTime(1, TimeUnit.MINUTES);
+        ks.fireAllRules();
+
         return ks;
     }
-
-    @GetMapping("/forward")
-    public DemoResult runForwardDemo() {
+    @GetMapping()
+    public Map<String, Object> runCepDemo() {
         KieSession ks = setupAndFire();
 
-        DemoResult result = new DemoResult();
-        result.firedRules = -1; // setupAndFire već okinuo, broj se gubi - nebitno za demo
-        result.scores = ks.getObjects(o -> o instanceof CardScore).stream()
-                .map(Object::toString).sorted().collect(Collectors.toList());
-        result.owns = ks.getObjects(o -> o instanceof Owns).stream()
-                .map(Object::toString).sorted().collect(Collectors.toList());
-        result.notOwns = ks.getObjects(o -> o instanceof NotOwns).stream()
-                .map(Object::toString).sorted().collect(Collectors.toList());
-        result.solutions = ks.getObjects(o -> o instanceof Solution).stream()
-                .map(Object::toString).sorted().collect(Collectors.toList());
+        Map<String, Object> result = new HashMap<>();
+        result.put("scores", ks.getObjects(o -> o instanceof CardScore).stream()
+                .map(Object::toString).sorted().collect(Collectors.toList()));
+        result.put("owns", ks.getObjects(o -> o instanceof Owns).stream()
+                .map(Object::toString).sorted().collect(Collectors.toList()));
+        result.put("notOwns", ks.getObjects(o -> o instanceof NotOwns).stream()
+                .map(Object::toString).sorted().collect(Collectors.toList()));
+        result.put("solutions", ks.getObjects(o -> o instanceof Solution).stream()
+                .map(Object::toString).sorted().collect(Collectors.toList()));
 
         ks.dispose();
         return result;
     }
 
     @GetMapping("/table")
-    public PossibilityTable runForwardTable() {
+    public PossibilityTable runCepTable() {
         KieSession ks = setupAndFire();
 
-        // Karte
         List<Card> allCardsList = ks.getObjects(o -> o instanceof Card).stream()
                 .map(o -> (Card) o).collect(Collectors.toList());
 
-        // Igrači - Ja prvo, ostali abecedno
         List<Player> allPlayersList = ks.getObjects(o -> o instanceof Player).stream()
                 .map(o -> (Player) o).collect(Collectors.toList());
         allPlayersList.sort((p1, p2) -> {
@@ -178,14 +213,12 @@ public class ForwardGamePlayDemoController {
             return p1.getName().compareTo(p2.getName());
         });
 
-        // Score mapa
         Map<String, Integer> scoreMap = new HashMap<>();
         for (Object o : ks.getObjects(o -> o instanceof CardScore)) {
             CardScore cs = (CardScore) o;
             scoreMap.put(cs.getCard().getName(), cs.getScore());
         }
 
-        // (igrač, karta) -> "O" ili "X"
         Map<String, String> ownershipMap = new HashMap<>();
         for (Object o : ks.getObjects(o -> o instanceof Owns)) {
             Owns ow = (Owns) o;
@@ -197,13 +230,11 @@ public class ForwardGamePlayDemoController {
             ownershipMap.putIfAbsent(key, "X");
         }
 
-        // Solution
         Set<String> solutionCards = new HashSet<>();
         for (Object o : ks.getObjects(o -> o instanceof Solution)) {
             solutionCards.add(((Solution) o).getCard().getName());
         }
 
-        // Grupiši karte po kategoriji
         Map<CardType, List<Card>> cardsByType = new LinkedHashMap<>();
         cardsByType.put(CardType.SUSPECT, new ArrayList<>());
         cardsByType.put(CardType.WEAPON, new ArrayList<>());
@@ -215,7 +246,6 @@ public class ForwardGamePlayDemoController {
             cs.sort((c1, c2) -> c1.getName().compareTo(c2.getName()));
         }
 
-        // Popuni DTO
         PossibilityTable table = new PossibilityTable();
         table.players = allPlayersList.stream()
                 .map(Player::getName).collect(Collectors.toList());
@@ -245,7 +275,7 @@ public class ForwardGamePlayDemoController {
             }
             table.groups.add(group);
         }
-// Tok partije — iz Suggestion + NoShow + PrivateShow + Reveal
+// ===== Tok partije i slabe činjenice =====
         List<Suggestion> allSuggestions = ks.getObjects(o -> o instanceof Suggestion).stream()
                 .map(o -> (Suggestion) o)
                 .sorted((s1, s2) -> Integer.compare(s1.getTurnNumber(), s2.getTurnNumber()))
@@ -255,6 +285,8 @@ public class ForwardGamePlayDemoController {
                 .map(o -> (NoShow) o).collect(Collectors.toList());
         List<PrivateShow> allPrivateShows = ks.getObjects(o -> o instanceof PrivateShow).stream()
                 .map(o -> (PrivateShow) o).collect(Collectors.toList());
+        List<Reveal> allReveals = ks.getObjects(o -> o instanceof Reveal).stream()
+                .map(o -> (Reveal) o).collect(Collectors.toList());
 
         table.turns = new ArrayList<>();
         table.hints = new ArrayList<>();
@@ -271,12 +303,9 @@ public class ForwardGamePlayDemoController {
                     .map(ns -> ns.getPlayer().getName())
                     .collect(Collectors.toList());
 
-            // Da li sam ja postavila sugestiju? Onda vidimo tačnu kartu (Reveal)
             if (sug.getSuggester().isSelf()) {
-                // Tražimo Reveal koji je relevantan za ovu sugestiju
-                // (heuristika: bilo koji Reveal čija karta je u trojki sugestije)
-                for (Object o : ks.getObjects(x -> x instanceof Reveal)) {
-                    Reveal r = (Reveal) o;
+                // Ja sugerišem -> tražim Reveal za neku od tri karte iz ove sugestije
+                for (Reveal r : allReveals) {
                     Card c = r.getCard();
                     if (c.equals(sug.getSuspect()) || c.equals(sug.getWeapon()) || c.equals(sug.getRoom())) {
                         t.shower = r.getRevealer().getName();
@@ -286,13 +315,13 @@ public class ForwardGamePlayDemoController {
                     }
                 }
             } else {
-                // Inače gledamo PrivateShow
+                // Drugi sugeriše -> tražim PrivateShow
                 for (PrivateShow ps : allPrivateShows) {
                     if (ps.getSuggestion() == sug) {
                         t.shower = ps.getShower().getName();
                         t.shownTo = ps.getRecipient().getName();
                         t.isPrivate = true;
-                        // Disjunkcija - hint za korisnika
+
                         PossibilityTable.DisjunctionEntry d = new PossibilityTable.DisjunctionEntry();
                         d.player = ps.getShower().getName();
                         d.candidateCards = Arrays.asList(
@@ -309,16 +338,5 @@ public class ForwardGamePlayDemoController {
         }
         ks.dispose();
         return table;
-    }
-
-    // ========================================================================
-    // DTO za sirovi endpoint
-    // ========================================================================
-    public static class DemoResult {
-        public int firedRules;
-        public List<String> scores;
-        public List<String> owns;
-        public List<String> notOwns;
-        public List<String> solutions;
     }
 }
