@@ -380,46 +380,59 @@ end
 // ============================================================================
 
 rule "6.2.1 - SUGGEST SUSPECT"
+salience 40
 no-loop true
 when
     $maxS: Number() from accumulate(
         CardScore($sx: score, score > 0, $cx: card)
-        and Card(this == $cx, type == CardType.SUSPECT),
+        and Card(this == $cx, type == CardType.SUSPECT)
+        and not Owns(card == $cx),
         max($sx)
     )
     $best: CardScore($card: card, score == $maxS)
     Card(this == $card, type == CardType.SUSPECT)
+    not Owns(card == $card)
     not CardScore($c2: card, score == $maxS,
-        eval($c2 != $card && $c2.getType() == com.ftn.sbnz.model.CardType.SUSPECT
+        eval($c2 != $card && $c2.getType() == CardType.SUSPECT
              && $c2.getName().compareTo($card.getName()) < 0)
     )
-    not SuggestCard(category == CardType.SUSPECT)
 then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof SuggestCard && ((SuggestCard) obj).getCategory() == CardType.SUSPECT)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new SuggestCard(CardType.SUSPECT, $card));
-    System.out.println("[6.2.1] SUGGEST SUSPECT -> " + $card.getName() + " (score=" + $maxS + ")");
+    System.out.println("[6.2.1] SUGGEST SUSPECT -> " + $card.getName());
 end
 
 rule "6.2.1 - SUGGEST WEAPON"
+salience 40
 no-loop true
 when
     $maxW: Number() from accumulate(
         CardScore($sw: score, score > 0, $cw: card)
-        and Card(this == $cw, type == CardType.WEAPON),
+        and Card(this == $cw, type == CardType.WEAPON)
+        and not Owns(card == $cw),
         max($sw)
     )
     $best: CardScore($card: card, score == $maxW)
     Card(this == $card, type == CardType.WEAPON)
+    not Owns(card == $card)
     not CardScore($c2: card, score == $maxW,
-        eval($c2 != $card && $c2.getType() == com.ftn.sbnz.model.CardType.WEAPON
+        eval($c2 != $card && $c2.getType() == CardType.WEAPON
              && $c2.getName().compareTo($card.getName()) < 0)
     )
-    not SuggestCard(category == CardType.WEAPON)
 then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof SuggestCard && ((SuggestCard) obj).getCategory() == CardType.WEAPON)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new SuggestCard(CardType.WEAPON, $card));
-    System.out.println("[6.2.1] SUGGEST WEAPON -> " + $card.getName() + " (score=" + $maxW + ")");
+    System.out.println("[6.2.1] SUGGEST WEAPON -> " + $card.getName());
 end
 
 rule "6.2.1 - SUGGEST ROOM"
+salience 40
 no-loop true
 when
     $maxR: Number() from accumulate(
@@ -430,11 +443,14 @@ when
     $best: CardScore($card: card, score == $maxR)
     Card(this == $card, type == CardType.ROOM)
     not CardScore($c2: card, score == $maxR,
-        eval($c2 != $card && $c2.getType() == com.ftn.sbnz.model.CardType.ROOM
+        eval($c2 != $card && $c2.getType() == CardType.ROOM
              && $c2.getName().compareTo($card.getName()) < 0)
     )
-    not SuggestCard(category == CardType.ROOM)
 then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof SuggestCard && ((SuggestCard) obj).getCategory() == CardType.ROOM)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
     insert(new SuggestCard(CardType.ROOM, $card));
-    System.out.println("[6.2.1] SUGGEST ROOM -> " + $card.getName() + " (score=" + $maxR + ")");
+    System.out.println("[6.2.1] SUGGEST ROOM -> " + $card.getName());
 end

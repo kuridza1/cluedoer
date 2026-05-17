@@ -2,16 +2,16 @@ package com.ftn.sbnz.model;
 
 public class OptimalAction {
     private String action;  // "SUGGESTION", "SHOW", "ACCUSE", "DEFAULT"
-    private Card card;      // Za SUGGESTION, SHOW, DEFAULT
+    private Card card;      // Za SHOW, DEFAULT
     private CardType category;
     private String reasoning;
 
-    // Za ACCUSE - cela kombinacija
+    // Za SUGGESTION i ACCUSE - cela kombinacija
     private Card suspect;
     private Card weapon;
     private Card room;
 
-    // Konstruktor za SUGGESTION, SHOW, DEFAULT
+    // Konstruktor za SHOW, DEFAULT (jedna karta)
     public OptimalAction(String action, Card card, CardType category, String reasoning) {
         this.action = action;
         this.card = card;
@@ -19,7 +19,7 @@ public class OptimalAction {
         this.reasoning = reasoning;
     }
 
-    // Konstruktor za ACCUSE
+    // Konstruktor za SUGGESTION i ACCUSE (tri karte)
     public OptimalAction(String action, Card suspect, Card weapon, Card room, String reasoning) {
         this.action = action;
         this.suspect = suspect;
@@ -39,8 +39,8 @@ public class OptimalAction {
 
     @Override
     public String toString() {
-        if ("ACCUSE".equals(action)) {
-            return "OptimalAction[ACCUSE: " + suspect.getName() + ", " + weapon.getName() + ", " + room.getName() + "]";
+        if ("ACCUSE".equals(action) || "SUGGESTION".equals(action)) {
+            return "OptimalAction[" + action + ": " + suspect.getName() + ", " + weapon.getName() + ", " + room.getName() + "]";
         }
         return "OptimalAction[" + action + " -> " + card.getName() + "]";
     }

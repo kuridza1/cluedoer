@@ -115,19 +115,27 @@ when
     $p: Player(self == false)
     $c: Card()
 
-    $oldSug: Suggestion(suggester == $p,
-                        suspect == $c || weapon == $c || room == $c)
+    // Igrač je koristio kartu u NAJMANJE 2 sugestije (ne samo 1!)
+    $count: Number(intValue >= 2) from accumulate(
+        Suggestion(suggester == $p,
+                   suspect == $c || weapon == $c || room == $c),
+        count(1)
+    )
 
-    not Suggestion(suggester == $p, this != $oldSug,
+    // Prestao je da je koristi u novijim sugestijama
+    $lastSug: Suggestion(suggester == $p,
+                         suspect == $c || weapon == $c || room == $c)
+    not Suggestion(suggester == $p, this after $lastSug,
                    suspect == $c || weapon == $c || room == $c)
 
     CardScore(card == $c, score > 0)
+    CardScore(card == $c, score < 50)
 
     not KnowsCard(player == $p, card == $c)
 then
     insert(new KnowsCard($p, $c));
     System.out.println("[6.3.4] VEROVATNO ZNA - " + $p.getName() +
-                       " prestao da koristi " + $c.getName());
+                       " prestao da koristi " + $c.getName() + " (koristio je " + $count + " puta)");
 end
 
 

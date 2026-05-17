@@ -33,19 +33,30 @@ import com.ftn.sbnz.model.OptimalAction;
 // ============================================================================
 
 // Rule that determines optimal suggestion based on all checks
-rule "6.4.1 - DETERMINE OPTIMAL SUGGESTION"
+rule "6.4.1 - DETERMINE OPTIMAL SUGGESTION - COMPLETE"
 salience 10
 when
-    $sugCard: SuggestCard($card: card, $category: category)
-    $maxScore: Number() from accumulate(CardScore($s: score, score > 0), max($s))
-    $cs: CardScore(card == $card, score == $maxScore)
-    $cs2: CardScore(card == $card, score > 0)
+    // Uzmi sve tri preporuke iz SuggestCard
+    $suspectSug: SuggestCard(category == CardType.SUSPECT, $suspect: card)
+    $weaponSug: SuggestCard(category == CardType.WEAPON, $weapon: card)
+    $roomSug: SuggestCard(category == CardType.ROOM, $room: card)
+
+    // Provera: NizakRizikOtkrivanja - nema HIGH risk
     not RiskWarning(level == RiskLevel.HIGH)
+
+    // Provera: EliminišeKandidate - bar jedna karta je nepoznata (score > 0) i nije Owns
+    (CardScore(card == $suspect, score > 0) and not Owns(card == $suspect))
+    or (CardScore(card == $weapon, score > 0) and not Owns(card == $weapon))
+    or (CardScore(card == $room, score > 0))
+
+    // Provera: VisokInformacioniDobitak - karta sa maksimalnim score-om (opciono)
+    // Nije obavezno za sve tri karte
+
     not OptimalAction(action == "SUGGESTION")
 then
-    insert(new OptimalAction("SUGGESTION", $card, $category,
-        "Suggestion " + $card.getName() + " is optimal - highest score, eliminates candidates, low risk"));
-    System.out.println("[6.4.1] OPTIMAL SUGGESTION: " + $card.getName());
+    insert(new OptimalAction("SUGGESTION", $suspect, $weapon, $room,
+        "Optimal suggestion: " + $suspect.getName() + ", " + $weapon.getName() + ", " + $room.getName()));
+    System.out.println("[6.4.1] OPTIMAL SUGGESTION: " + $suspect.getName() + ", " + $weapon.getName() + ", " + $room.getName());
 end
 
 // Rule that determines optimal show action
@@ -68,34 +79,26 @@ rule "6.4.1 - DETERMINE OPTIMAL ACCUSATION"
 salience 10
 when
     GameState(status == GameStatus.LATE_GAME)
-
-    // Only one suspect remaining (score > 0)
     $suspect: Card(type == CardType.SUSPECT)
     $suspectScore: CardScore(card == $suspect, score > 0)
-    not Card(type == CardType.SUSPECT, this != $suspect) and CardScore(card != $suspect, card.getType() == CardType.SUSPECT, score > 0)
+    not Card(type == CardType.SUSPECT, this != $suspect) and
+    not CardScore(card != $suspect, card.getType() == CardType.SUSPECT, score > 0)
 
-    // Only one weapon remaining (score > 0)
     $weapon: Card(type == CardType.WEAPON)
     $weaponScore: CardScore(card == $weapon, score > 0)
-    not Card(type == CardType.WEAPON, this != $weapon) and CardScore(card != $weapon, card.getType() == CardType.WEAPON, score > 0)
+    not Card(type == CardType.WEAPON, this != $weapon) and
+    not CardScore(card != $weapon, card.getType() == CardType.WEAPON, score > 0)
 
-    // Only one room remaining (score > 0)
     $room: Card(type == CardType.ROOM)
     $roomScore: CardScore(card == $room, score > 0)
-    not Card(type == CardType.ROOM, this != $room) and CardScore(card != $room, card.getType() == CardType.ROOM, score > 0)
+    not Card(type == CardType.ROOM, this != $room) and
+    not CardScore(card != $room, card.getType() == CardType.ROOM, score > 0)
 
     not OptimalAction(action == "ACCUSE")
-
 then
     insert(new OptimalAction("ACCUSE", $suspect, $weapon, $room,
         "Final accusation ready! Only remaining cards: " +
         $suspect.getName() + ", " + $weapon.getName() + ", " + $room.getName()));
-    System.out.println("========================================");
-    System.out.println("FINAL ACCUSATION READY:");
-    System.out.println("SUSPECT: " + $suspect.getName());
-    System.out.println("WEAPON: " + $weapon.getName());
-    System.out.println("ROOM: " + $room.getName());
-    System.out.println("========================================");
 end
 
 // Default strategy - if no optimal action found
