@@ -7,11 +7,7 @@ import com.ftn.sbnz.model.NotOwns;
 import com.ftn.sbnz.model.Player;
 import com.ftn.sbnz.model.Solution;
 
-// =========================================================
-// BACKWARD CHAINING - goal-driven rezonovanje
-// =========================================================
-
-// Bazni query: karta C sigurno nije ni kod jednog igrača -> u koverti
+// bazni query
 query "isInEnvelope"(Card $c)
     Card(this == $c)
     not (
@@ -20,13 +16,11 @@ query "isInEnvelope"(Card $c)
     )
 end
 
-// Pomocni query: karta je eliminisana kao kandidat za kovertu
-// (neki igrač sigurno poseduje)
 query "eliminatedFromEnvelope"(Card $c)
     Owns(card == $c)
 end
 
-// Rekurzivna kompozicija: karta je jedini preostali kandidat u svojoj kategoriji
+// rekurzija kad je samo jedna karta ostala u kategoriji
 query "isOnlyCandidateInCategory"(Card $c)
     Card(this == $c, $type: type)
     not (
@@ -35,7 +29,7 @@ query "isOnlyCandidateInCategory"(Card $c)
     )
 end
 
-// Glavni query: kompletno rešenje
+// kompletno resenje
 query "solutionKnown"(Card $suspect, Card $weapon, Card $room)
     Card(this == $suspect, type == CardType.SUSPECT)
     Card(this == $weapon, type == CardType.WEAPON)
@@ -45,7 +39,6 @@ query "solutionKnown"(Card $suspect, Card $weapon, Card $room)
     isInEnvelope($room;)
 end
 
-// Ko sve može imati datu kartu
 query "possibleOwners"(Card $c, Player $p)
     Player(this == $p)
     Card(this == $c)

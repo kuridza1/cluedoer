@@ -2,247 +2,1304 @@
 <html lang="sr">
 <head>
     <meta charset="UTF-8">
-    <title>Cluedo - Tabela mogućnosti</title>
+    <title>Cluedo — Interaktivni asistent</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 16px;
             color: #1a1a1a;
+            line-height: 1.45;
         }
-        h1 { margin-bottom: 8px; }
-        .meta {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        .category-title {
+        h1 { margin: 0 0 4px 0; }
+        .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+        h2 {
             margin-top: 30px;
-            margin-bottom: 8px;
-            font-size: 15px;
+            margin-bottom: 10px;
+            font-size: 18px;
+            border-bottom: 2px solid #1a1a1a;
+            padding-bottom: 4px;
+        }
+        h3 { margin-top: 16px; margin-bottom: 6px; font-size: 14px; color: #444; }
+        .panel-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
+        /* Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        .strategic-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .strategic-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Setup */
+        .setup-box {
+            background: #f5f7fa;
+            border: 1px solid #d5dde8;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .setup-row { margin-bottom: 10px; }
+        .setup-row label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 3px;
+        }
+        textarea, input[type=text], input[type=number], select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        textarea { min-height: 50px; resize: vertical; }
+        .players-list { display: grid; gap: 6px; }
+        .player-row {
+            display: grid;
+            grid-template-columns: 1fr 70px 60px 30px;
+            gap: 6px;
+            align-items: center;
+        }
+        .player-row .small-label { font-size: 11px; color: #888; text-align: center; }
+
+        button {
+            padding: 7px 14px;
+            border: none;
+            background: #2c5282;
+            color: white;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: #1f3a5f; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #545b62; }
+        button.danger { background: #c0392b; }
+        button.danger:hover { background: #962d21; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+
+        /* Tabela */
+        .category-title {
+            margin-top: 14px;
+            margin-bottom: 4px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #555;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        th, td {
-            padding: 10px 12px;
-            text-align: center;
-            border-bottom: 1px solid #e5e5e5;
-        }
-        th {
-            background: #f5f5f5;
             font-weight: 600;
         }
-        td.card-name {
-            text-align: left;
-            font-weight: 500;
-        }
-        td.score {
-            font-variant-numeric: tabular-nums;
-            color: #888;
-            font-size: 13px;
-        }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 5px 6px; text-align: center; border-bottom: 1px solid #e5e5e5; }
+        th { background: #f5f5f5; font-weight: 600; font-size: 11px; }
+        td.card-name { text-align: left; font-weight: 500; }
+        td.score { font-variant-numeric: tabular-nums; color: #666; font-size: 11px; }
         .cell-O { background: #d4edda; color: #155724; font-weight: bold; }
         .cell-X { background: #f8d7da; color: #721c24; }
         .cell-Q { background: #fff3cd; color: #856404; }
-        .cell-S { background: #cce5ff; color: #004085; font-weight: bold; font-size: 18px; }
-        .legend {
-            margin-top: 30px;
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            font-size: 13px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .legend-box {
-            display: inline-block;
-            width: 28px;
-            height: 22px;
-            line-height: 22px;
-            text-align: center;
-            font-weight: bold;
-        }
-        .turns, .hints {
-            margin-top: 40px;
-        }
-        .turn-row {
-            padding: 12px 16px;
+        .cell-S { background: #cce5ff; color: #004085; font-weight: bold; }
+
+        /* Forma za potez */
+        .turn-form {
+            background: #fafafa;
             border: 1px solid #e5e5e5;
             border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 14px;
+            padding: 14px;
+            position: sticky;
+            top: 10px;
         }
-        .turn-num {
-            display: inline-block;
-            background: #1a1a1a;
-            color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 24px;
+        .turn-form .form-row { margin-bottom: 8px; }
+        .turn-form label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
             font-size: 12px;
-            margin-right: 10px;
-            font-weight: bold;
         }
+        .checkbox-grid label {
+            text-transform: none;
+            letter-spacing: normal;
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            margin: 0;
+        }
+        .response-section {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        .radio-row {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .radio-row label {
+            text-transform: none;
+            letter-spacing: normal;
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        /* Strateški */
+        .card {
+            background: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        .card-empty { color: #aaa; font-style: italic; padding: 8px 12px; font-size: 12px; }
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-right: 4px;
+        }
+        .badge-state-early   { background: #e5f1ff; color: #2c5282; }
+        .badge-state-mid     { background: #fff3cd; color: #856404; }
+        .badge-state-late    { background: #ffe5e5; color: #8a3030; }
+        .badge-state-solved  { background: #d4edda; color: #155724; }
+        .badge-profile-bluff   { background: #ffe5e5; color: #8a3030; }
+        .badge-profile-defens  { background: #e5f1ff; color: #2c5282; }
+        .badge-profile-aggr    { background: #fff3cd; color: #856404; }
+        .badge-risk-high { background: #ffe5e5; color: #8a3030; }
+        .badge-risk-mid  { background: #fff3cd; color: #856404; }
+        .badge-risk-low  { background: #d4edda; color: #155724; }
         .tag {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin: 0 4px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin: 1px 2px;
         }
         .tag-suspect { background: #ffe5e5; color: #8a3030; }
         .tag-weapon  { background: #e5f1ff; color: #2c5282; }
         .tag-room    { background: #e5ffe5; color: #2f6b2f; }
         .tag-result  { background: #f5f5f5; color: #555; }
+
+        .turn-log-row {
+            padding: 6px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 12px;
+            background: white;
+        }
+        .turn-num {
+            display: inline-block;
+            background: #1a1a1a;
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 18px;
+            font-size: 10px;
+            margin-right: 6px;
+            font-weight: bold;
+        }
         .hint-row {
-            padding: 10px 14px;
+            padding: 5px 10px;
             background: #fff9e6;
             border-left: 3px solid #f0c040;
+            margin-bottom: 4px;
+            font-size: 11px;
+            border-radius: 0 3px 3px 0;
+        }
+        .hint-row.resolved {
+            background: #e6f9e6;
+            border-left-color: #4caf50;
+        }
+        .hidden { display: none; }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2c5282;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .toast.show { opacity: 1; }
+        .toast.error { background: #c0392b; }
+
+        /* === NOVI STILOVI === */
+
+        /* Top banner: resenje + predlozena trojka */
+        .top-banner {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 900px) {
+            .top-banner { grid-template-columns: 1fr; }
+        }
+        .top-panel {
+            background: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 14px;
+        }
+        .top-panel-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .top-panel.solved {
+            background: linear-gradient(to right, #d4edda, #c3e6cb);
+            border-color: #28a745;
+            border-width: 2px;
+        }
+        .top-panel.solved .top-panel-title { color: #155724; }
+        .solution-line {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .solution-banner-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 6px;
+        }
+
+        /* Ordered trio badges - SUSPECT, WEAPON, ROOM redom */
+        .trio-display {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .trio-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+        .trio-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 0.5px;
+        }
+
+        /* Top buttons row */
+        .top-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        /* Conclusion list iz PrivateShow-a */
+        .conclusion-row {
+            padding: 6px 10px;
+            background: #e6f9e6;
+            border-left: 3px solid #4caf50;
+            margin-bottom: 4px;
+            font-size: 12px;
+            border-radius: 0 3px 3px 0;
+        }
+
+        /* Show recommendation panel */
+        .show-rec-row {
+            padding: 8px 12px;
+            background: #fff3e0;
+            border-left: 3px solid #ff9800;
             margin-bottom: 6px;
             font-size: 13px;
-            border-radius: 0 4px 4px 0;
+            border-radius: 0 3px 3px 0;
         }
+        .show-rec-row strong { color: #e65100; }
     </style>
 </head>
 <body>
 
-<h1>Cluedo — Tabela mogućnosti</h1>
-<div class="nav" style="margin: 8px 0 20px 0; font-size: 14px;">
-    <a href="/index.html" style="color:#1a1a1a;font-weight:bold;margin-right:16px;text-decoration:none">Forward chaining (Nivo 1)</a>
-    <a href="/cep-deduct.html" style="color:#2c5282;text-decoration:none">CEP (Nivo 2) →</a>
+<h1>Cluedo — Interaktivni asistent</h1>
+<div class="subtitle">Unesi poteze jedan po jedan i prati šta sistem zaključuje.</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- ===== SETUP ===== -->
+<div id="setupSection" class="setup-box">
+    <h2 style="margin-top:0;border:none;font-size:16px">Početne postavke</h2>
+
+    <div class="setup-row">
+        <label>Osumnjičeni (zarezima razdvojeno)</label>
+        <textarea id="inSuspects">Green, Mustard, Peacock, Plum, Scarlet, White</textarea>
+    </div>
+    <div class="setup-row">
+        <label>Oružja (zarezima razdvojeno)</label>
+        <textarea id="inWeapons">Svecnjak, Bodez, Revolver, OlovnaCev, Konopac, Kljuc</textarea>
+    </div>
+    <div class="setup-row">
+        <label>Prostorije (zarezima razdvojeno)</label>
+        <textarea id="inRooms">Trem, Plesnjak, Kuhinja, Trpezarija, Salon, Hodnik, RadnaSoba, Biblioteka, BilijarSoba</textarea>
+    </div>
+
+    <div class="setup-row">
+        <label>Igrači (ime, broj karata u ruci, ja/ne)</label>
+        <div id="playersList" class="players-list"></div>
+        <button type="button" class="secondary" style="margin-top:6px;font-size:11px;padding:4px 10px"
+                onclick="addPlayerRow()">+ Dodaj igrača</button>
+    </div>
+
+    <div class="setup-row">
+        <label>Moje karte (zarezima razdvojeno)</label>
+        <textarea id="inMyCards">Scarlet, Bodez, Kuhinja</textarea>
+    </div>
+
+    <div class="btn-row">
+        <button onclick="startGame()">Pokreni igru</button>
+        <button class="danger" onclick="resetGame()">Reset</button>
+    </div>
 </div>
-<div class="meta" id="meta">Učitavanje…</div>
 
-<div id="tables"></div>
+<!-- ===== GLAVNA TABLA ===== -->
+<div id="gameSection" class="hidden">
 
-<div class="legend">
-    <div class="legend-item"><span class="legend-box cell-O">O</span> sigurno poseduje</div>
-    <div class="legend-item"><span class="legend-box cell-X">X</span> sigurno ne poseduje</div>
-    <div class="legend-item"><span class="legend-box cell-Q">?</span> moguće</div>
-    <div class="legend-item"><span class="legend-box cell-S">✓</span> u koverti</div>
-</div>
+    <!-- TOP BUTTONS: vrati se na setup / reset -->
+    <div class="top-buttons">
+        <button class="secondary" onclick="backToSetup()">← Vrati se na postavke</button>
+        <button class="danger" onclick="resetGame()">Reset igre</button>
+    </div>
 
-<div class="turns">
+    <!-- TOP BANNER: resenje + predlozena trojka -->
+    <div class="top-banner">
+        <div id="solutionBanner" class="top-panel">
+            <div class="top-panel-title">Status istrage</div>
+            <div id="solutionContent" class="solution-line">Još tražim rešenje…</div>
+        </div>
+        <div class="top-panel">
+            <div class="top-panel-title">Predložena trojka za sledeću sugestiju</div>
+            <div id="suggestTrio" class="trio-display">
+                <div class="card-empty">Nema predloga.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <!-- Levo: tabela -->
+        <div id="tableContainer"></div>
+
+        <!-- Desno: forma za potez -->
+        <div>
+            <div class="turn-form">
+                <h2 style="margin-top:0;border:none;font-size:16px">Novi potez</h2>
+                <div id="turnNumDisplay" style="font-size:12px;color:#666;margin-bottom:10px"></div>
+
+                <div class="form-row">
+                    <label>Ko predlaže</label>
+                    <select id="suggester"></select>
+                </div>
+                <div class="form-row">
+                    <label>Osumnjičeni</label>
+                    <select id="suspect"></select>
+                </div>
+                <div class="form-row">
+                    <label>Oružje</label>
+                    <select id="weapon"></select>
+                </div>
+                <div class="form-row">
+                    <label>Prostorija</label>
+                    <select id="room"></select>
+                </div>
+
+                <div class="form-row">
+                    <label>Niko nije pokazao (NoShow)</label>
+                    <div id="noShowChecks" class="checkbox-grid"></div>
+                </div>
+
+                <div class="response-section">
+                    <label style="font-size:11px;font-weight:600;color:#555;text-transform:uppercase">Ko je pokazao kartu</label>
+                    <select id="shower" style="margin-top:4px"></select>
+
+                    <div id="revealedCardRow" class="form-row hidden" style="margin-top:8px">
+                        <label>Koju kartu je pokazao (samo ako sam ja predlagao)</label>
+                        <select id="revealedCard"></select>
+                    </div>
+                </div>
+
+                <!-- Preporuka koju kartu da pokazem kad sam pokazivac -->
+                <div id="showRecommendationBox" class="hidden" style="margin-top:10px">
+                    <div class="panel-title" style="margin-bottom:4px">Preporuka šta da pokažeš</div>
+                    <div id="showRecommendationContent"></div>
+                </div>
+
+                <div class="btn-row">
+                    <button onclick="submitTurn()">Pošalji potez</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== STRATEŠKI PANEL ===== -->
+    <h2>Strateška preporuka</h2>
+    <div class="strategic-grid">
+        <div>
+            <div class="panel-title">Stanje igre</div>
+            <div id="gameStates"></div>
+
+            <div class="panel-title" style="margin-top:14px">Preporuka</div>
+            <div id="recommendations"></div>
+
+            <div class="panel-title" style="margin-top:14px">Profili protivnika</div>
+            <div id="profiles"></div>
+        </div>
+        <div>
+            <div class="panel-title">Upozorenja</div>
+            <div id="riskWarnings"></div>
+
+            <div class="panel-title" style="margin-top:14px">Šta protivnici znaju</div>
+            <div id="knowsCards"></div>
+
+            <div class="panel-title" style="margin-top:14px">Fokus prostorija</div>
+            <div id="roomFocuses"></div>
+
+            <div class="panel-title" style="margin-top:14px">Visoke sumnje</div>
+            <div id="highSuspicions"></div>
+        </div>
+    </div>
+
     <h2>Tok partije</h2>
-    <div id="turnsList"></div>
-</div>
+    <div id="turnLog"></div>
 
-<div class="hints">
     <h2>Slabe činjenice (disjunkcije)</h2>
-    <div class="meta">Ko ima bar jednu od navedenih karata — još ne znamo koju.</div>
-    <div id="hintsList"></div>
+    <div id="hints"></div>
+
+    <h2>Zaključci iz privatnih show-ova</h2>
+    <div id="conclusions"></div>
+
+    <h2>Backward chaining (na zahtev)</h2>
+    <div id="backward"></div>
 </div>
 
 <script>
-    async function load() {
-        const res = await fetch('/api/demo/table');
-        const data = await res.json();
+    const API = '/api/game';
+    let state = null;
 
-        document.getElementById('meta').textContent =
-            `${data.players.length} igrača, ${data.groups.reduce((a,g) => a + g.rows.length, 0)} karata`;
+    // Sacuvani zakljucci iz prethodnih turn-ova (za detekciju "novih" zakljucaka)
+    let previousNotOwns = new Set();
 
-        const container = document.getElementById('tables');
-        container.innerHTML = '';
-        for (const group of data.groups) {
-            const title = document.createElement('div');
-            title.className = 'category-title';
-            title.textContent = categoryLabel(group.category);
-            container.appendChild(title);
+    /* =========================================================
+       SETUP
+       ========================================================= */
+    function addPlayerRow(name = '', handSize = 3, self = false) {
+        const div = document.createElement('div');
+        div.className = 'player-row';
+        div.innerHTML = `
+            <input type="text" placeholder="Ime" value="${name}">
+            <input type="number" min="1" value="${handSize}">
+            <label style="display:flex;align-items:center;gap:3px;font-size:11px">
+                <input type="checkbox" ${self ? 'checked' : ''}> Ja
+            </label>
+            <button class="secondary" style="padding:3px 7px;font-size:10px"
+                    onclick="this.parentElement.remove()">×</button>
+        `;
+        document.getElementById('playersList').appendChild(div);
+    }
 
-            const table = document.createElement('table');
-            const thead = document.createElement('thead');
-            const trHead = document.createElement('tr');
-            trHead.innerHTML = '<th style="text-align:left">Karta</th><th>Score</th>' +
-                data.players.map(p => `<th>${p}</th>`).join('');
-            thead.appendChild(trHead);
-            table.appendChild(thead);
+    // Default igrači
+    addPlayerRow('Ja', 3, true);
+    addPlayerRow('A', 3);
+    addPlayerRow('B', 3);
+    addPlayerRow('C', 3);
+    addPlayerRow('D', 3);
+    addPlayerRow('E', 3);
 
+    function parseCsv(id) {
+        return document.getElementById(id).value
+            .split(',').map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    function getPlayersFromForm() {
+        const rows = document.querySelectorAll('#playersList .player-row');
+        const out = [];
+        rows.forEach(r => {
+            const inputs = r.querySelectorAll('input');
+            const name = inputs[0].value.trim();
+            if (!name) return;
+            out.push({
+                name,
+                handSize: parseInt(inputs[1].value) || 3,
+                self: inputs[2].checked
+            });
+        });
+        return out;
+    }
+
+    async function startGame() {
+        const body = {
+            suspects: parseCsv('inSuspects'),
+            weapons: parseCsv('inWeapons'),
+            rooms: parseCsv('inRooms'),
+            players: getPlayersFromForm(),
+            myCards: parseCsv('inMyCards')
+        };
+        const me = body.players.find(p => p.self);
+        body.myName = me ? me.name : null;
+
+        try {
+            const res = await fetch(API + '/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error(await res.text());
+            state = await res.json();
+            previousNotOwns = new Set();
+            // SAKRIJ setup, prikazi game
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('gameSection').classList.remove('hidden');
+            renderAll();
+            toast('Igra pokrenuta.');
+        } catch (e) {
+            toast('Greška: ' + e.message, true);
+        }
+    }
+
+    async function resetGame() {
+        try {
+            await fetch(API + '/reset', {method: 'POST'});
+            document.getElementById('gameSection').classList.add('hidden');
+            document.getElementById('setupSection').classList.remove('hidden');
+            state = null;
+            previousNotOwns = new Set();
+            toast('Reset.');
+        } catch (e) {
+            toast('Greška: ' + e.message, true);
+        }
+    }
+
+    // NOVO: vrati se na setup ali ne brisi igru u backendu
+    function backToSetup() {
+        document.getElementById('gameSection').classList.add('hidden');
+        document.getElementById('setupSection').classList.remove('hidden');
+        toast('Vraćeno na postavke. Igra je i dalje aktivna.');
+    }
+
+    /* =========================================================
+       SUBMIT POTEZ
+       ========================================================= */
+    async function submitTurn() {
+        const suggester = document.getElementById('suggester').value;
+        const suspect = document.getElementById('suspect').value;
+        const weapon = document.getElementById('weapon').value;
+        const room = document.getElementById('room').value;
+        const shower = document.getElementById('shower').value || null;
+        const revealedCard = document.getElementById('revealedCard').value || null;
+
+        const noShowPlayers = [];
+        document.querySelectorAll('#noShowChecks input:checked').forEach(c => {
+            if (c.value !== shower) {
+                noShowPlayers.push(c.value);
+            }
+        });
+
+        const me = myName();
+        const iAmInvolved = (suggester === me) || (shower === me);
+
+        const body = {
+            suggester, suspect, weapon, room,
+            noShowPlayers,
+            shower,
+            revealedCard: (iAmInvolved ? revealedCard : null)
+        };
+
+        // Zapamti trenutni notOwns za poredjenje
+        previousNotOwns = new Set(state.knowledgeSnapshot.notOwns || []);
+
+        try {
+            const res = await fetch(API + '/suggestion', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error(await res.text());
+            state = await res.json();
+            renderAll();
+            document.querySelectorAll('#noShowChecks input').forEach(c => c.checked = false);
+            document.getElementById('shower').value = '';
+            document.getElementById('revealedCard').value = '';
+            toast('Potez zabeležen.');
+        } catch (e) {
+            toast('Greška: ' + e.message, true);
+        }
+    }
+
+    function myName() {
+        if (!state || !state.table) return null;
+        return state.table.players[0];
+    }
+
+    /* =========================================================
+       RENDER
+       ========================================================= */
+    function renderAll() {
+        renderTopBanner();
+        renderForm();
+        renderTable();
+        renderStrategic();
+        renderShowRecommendation();
+        renderTurnLog();
+        renderHints();
+        renderConclusions();
+        renderBackward();
+    }
+
+    /* ----- Top banner: resenje + predlozena trojka po redu ----- */
+    function renderTopBanner() {
+        const bc = state.knowledgeSnapshot.backwardChaining;
+        const banner = document.getElementById('solutionBanner');
+        const content = document.getElementById('solutionContent');
+
+        // Trojka iznad tabele (uvek vidljiva, sortirana SUSPECT-WEAPON-ROOM)
+        renderSuggestTrio();
+
+        // Resenje banner
+        if (bc.solutionFound && bc.solution) {
+            banner.classList.add('solved');
+            content.innerHTML =
+                `<div class="solution-banner-title">🎯 REŠENJE PRONAĐENO!</div>` +
+                `<span class="tag tag-suspect">${bc.solution.suspect}</span>` +
+                `<span class="tag tag-weapon">${bc.solution.weapon}</span>` +
+                `<span class="tag tag-room">${bc.solution.room}</span>`;
+            return;
+        }
+        banner.classList.remove('solved');
+
+        // Ako nema kompletnog resenja, prikazi karte koje su vec u koverti
+        const inEnvelope = bc.cardsInEnvelope || [];
+        if (inEnvelope.length > 0) {
+            // Mapiraj svaku kartu na njen tip da dobijemo lep redosled
+            const meta = state.meta;
+            const envelopeBy = {SUSPECT: null, WEAPON: null, ROOM: null};
+            for (const cardName of inEnvelope) {
+                if (meta.cards.SUSPECT.includes(cardName)) envelopeBy.SUSPECT = cardName;
+                else if (meta.cards.WEAPON.includes(cardName)) envelopeBy.WEAPON = cardName;
+                else if (meta.cards.ROOM.includes(cardName)) envelopeBy.ROOM = cardName;
+            }
+            const parts = [];
+            parts.push(envelopeBy.SUSPECT
+                ? `<span class="tag tag-suspect">${envelopeBy.SUSPECT}</span>`
+                : `<span class="tag" style="background:#eee;color:#999">osumnjičeni ?</span>`);
+            parts.push(envelopeBy.WEAPON
+                ? `<span class="tag tag-weapon">${envelopeBy.WEAPON}</span>`
+                : `<span class="tag" style="background:#eee;color:#999">oružje ?</span>`);
+            parts.push(envelopeBy.ROOM
+                ? `<span class="tag tag-room">${envelopeBy.ROOM}</span>`
+                : `<span class="tag" style="background:#eee;color:#999">prostorija ?</span>`);
+            content.innerHTML =
+                `<div style="margin-bottom:6px;color:#555">Poznato u koverti (${inEnvelope.length}/3):</div>` +
+                parts.join('');
+        } else {
+            content.innerHTML = '<div style="color:#888">Još tražim rešenje…</div>';
+        }
+    }
+
+    /* ----- Predlozena trojka u redosledu SUSPECT, WEAPON, ROOM ----- */
+    function renderSuggestTrio() {
+        const trioEl = document.getElementById('suggestTrio');
+        const suggestCards = state.strategicOutput.suggestCards || [];
+
+        if (!suggestCards.length) {
+            trioEl.innerHTML = '<div class="card-empty">Nema predloga.</div>';
+            return;
+        }
+
+        // Parsiraj suggestCards u mapu po kategoriji
+        const byCategory = {SUSPECT: null, WEAPON: null, ROOM: null};
+        for (const sc of suggestCards) {
+            const m = sc.match(/SuggestCard\[(\w+) -> (\w+)\]/);
+            if (m) byCategory[m[1]] = m[2];
+        }
+
+        // Prikazi u zadatom redosledu: osumnjiceni, oruzje, prostorija
+        const order = [
+            ['SUSPECT', 'Osumnjičeni', 'tag-suspect'],
+            ['WEAPON', 'Oružje', 'tag-weapon'],
+            ['ROOM', 'Prostorija', 'tag-room']
+        ];
+        trioEl.innerHTML = order.map(([cat, label, cls]) => {
+            const card = byCategory[cat];
+            if (!card) return '';
+            return `<div class="trio-item">
+                <div class="trio-label">${label}</div>
+                <span class="tag ${cls}" style="font-size:13px;padding:3px 8px">${card}</span>
+            </div>`;
+        }).join('');
+    }
+
+    function renderForm() {
+        const meta = state.meta;
+        const players = Array.from(meta.players);
+        const suspects = meta.cards.SUSPECT;
+        const weapons = meta.cards.WEAPON;
+        const rooms = meta.cards.ROOM;
+
+        fillSelect('suggester', players);
+        fillSelect('suspect', suspects);
+        fillSelect('weapon', weapons);
+        fillSelect('room', rooms);
+        fillSelect('shower', players, true);
+
+        // NoShow checkboxes - sa live sinhronizacijom sa shower-om
+        const ns = document.getElementById('noShowChecks');
+        ns.innerHTML = '';
+        players.forEach(p => {
+            const lab = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = p;
+            cb.onchange = () => {
+                if (cb.checked && document.getElementById('shower').value === p) {
+                    document.getElementById('shower').value = '';
+                    updateRevealField();
+                }
+            };
+            lab.appendChild(cb);
+            lab.appendChild(document.createTextNode(' ' + p));
+            ns.appendChild(lab);
+        });
+
+        const sug = document.getElementById('suggester');
+        const shw = document.getElementById('shower');
+        const suspectSel = document.getElementById('suspect');
+        const weaponSel = document.getElementById('weapon');
+        const roomSel = document.getElementById('room');
+        const revealRow = document.getElementById('revealedCardRow');
+        const revealLabel = revealRow.querySelector('label');
+        const me = myName();
+
+        const myCards = parseCsv('inMyCards');
+
+        const updateRevealField = () => {
+            const suggesterVal = sug.value;
+            const showerVal = shw.value;
+            const sugCards = [suspectSel.value, weaponSel.value, roomSel.value]
+                .filter(c => c);
+
+            if (showerVal === me && suggesterVal !== me) {
+                const myMatchingCards = sugCards.filter(c => myCards.includes(c));
+                revealLabel.textContent = 'Koju kartu pokazujem (jedna od mojih)';
+                fillSelect('revealedCard', myMatchingCards, true);
+                revealRow.classList.remove('hidden');
+            } else if (suggesterVal === me && showerVal && showerVal !== me) {
+                revealLabel.textContent = 'Koju kartu mi je pokazao';
+                fillSelect('revealedCard', sugCards, true);
+                revealRow.classList.remove('hidden');
+            } else {
+                revealRow.classList.add('hidden');
+                document.getElementById('revealedCard').value = '';
+            }
+
+            // Disable NoShow checkbox za showera
+            document.querySelectorAll('#noShowChecks input').forEach(cb => {
+                if (cb.value === shw.value) {
+                    cb.checked = false;
+                    cb.disabled = true;
+                    cb.parentElement.style.opacity = '0.4';
+                } else {
+                    cb.disabled = false;
+                    cb.parentElement.style.opacity = '1';
+                }
+            });
+
+            // Show recommendation - prikazi savet sta da pokazem kad sam pokazivac
+            updateShowRecommendationVisibility();
+        };
+
+        sug.onchange = updateRevealField;
+        shw.onchange = () => {
+            const showerVal = shw.value;
+            if (showerVal) {
+                const cb = document.querySelector(`#noShowChecks input[value="${showerVal}"]`);
+                if (cb) cb.checked = false;
+            }
+            updateRevealField();
+        };
+        suspectSel.onchange = updateRevealField;
+        weaponSel.onchange = updateRevealField;
+        roomSel.onchange = updateRevealField;
+
+        updateRevealField();
+
+        document.getElementById('turnNumDisplay').textContent =
+            'Sledeći potez: ' + (meta.turnCounter + 1);
+    }
+
+    function fillSelect(id, options, allowEmpty = false) {
+        const sel = document.getElementById(id);
+        const current = sel.value;
+        sel.innerHTML = '';
+        if (allowEmpty) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '— niko —';
+            sel.appendChild(opt);
+        }
+        options.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o;
+            opt.textContent = o;
+            sel.appendChild(opt);
+        });
+        if (current && options.includes(current)) sel.value = current;
+    }
+
+    function renderTable() {
+        const table = state.table;
+        const cont = document.getElementById('tableContainer');
+        cont.innerHTML = '';
+
+        const h = document.createElement('h2');
+        h.textContent = 'Tabela mogućnosti';
+        h.style.marginTop = '0';
+        cont.appendChild(h);
+
+        for (const group of table.groups) {
+            const t = document.createElement('div');
+            t.className = 'category-title';
+            t.textContent = categoryLabel(group.category);
+            cont.appendChild(t);
+
+            const tbl = document.createElement('table');
+            tbl.innerHTML =
+                '<thead><tr><th style="text-align:left">Karta</th><th>Score</th>' +
+                table.players.map(p => `<th>${p}</th>`).join('') +
+                '</tr></thead>';
             const tbody = document.createElement('tbody');
             for (const row of group.rows) {
                 const tr = document.createElement('tr');
                 const cells = row.cells.map(c => {
-                    const cls = c === 'O' ? 'cell-O'
-                        : c === 'X' ? 'cell-X'
-                            : c === '✓' ? 'cell-S'
-                                : 'cell-Q';
+                    const cls = c === 'O' ? 'cell-O' :
+                        c === 'X' ? 'cell-X' :
+                            c === '✓' ? 'cell-S' : 'cell-Q';
                     return `<td class="${cls}">${c}</td>`;
                 }).join('');
                 tr.innerHTML =
                     `<td class="card-name">${row.cardName}</td>` +
-                    `<td class="score">${row.score}</td>` +
-                    cells;
+                    `<td class="score">${row.score}</td>` + cells;
                 tbody.appendChild(tr);
             }
-            table.appendChild(tbody);
-            container.appendChild(table);
-        }
-
-        // Tok partije
-        const turnsEl = document.getElementById('turnsList');
-        turnsEl.innerHTML = '';
-        for (const t of (data.turns || [])) {
-            const div = document.createElement('div');
-            div.className = 'turn-row';
-            let result;
-            if (t.revealedCard) {
-                result = `<strong>${t.shower}</strong> pokazao <span class="tag tag-result">${t.revealedCard}</span> meni`;
-            } else if (t.isPrivate) {
-                result = `<strong>${t.shower}</strong> pokazao neku kartu igraču <strong>${t.shownTo}</strong> (ne vidim koju)`;
-            } else {
-                result = `niko nije pokazao`;
-            }
-            const noShows = (t.noShowPlayers || []).length > 0
-                ? ` &nbsp;·&nbsp; preskočili: ${t.noShowPlayers.join(', ')}`
-                : '';
-            div.innerHTML =
-                `<span class="turn-num">${t.number}</span>` +
-                `<strong>${t.suggester}</strong> sugeriše: ` +
-                `<span class="tag tag-suspect">${t.suspect}</span>` +
-                `<span class="tag tag-weapon">${t.weapon}</span>` +
-                `<span class="tag tag-room">${t.room}</span>` +
-                `<br><span style="margin-left:34px;color:#666">→ ${result}${noShows}</span>`;
-            turnsEl.appendChild(div);
-        }
-
-        // Disjunkcije
-        const hintsEl = document.getElementById('hintsList');
-        hintsEl.innerHTML = '';
-        if ((data.hints || []).length === 0) {
-            hintsEl.innerHTML = '<div class="meta">Nema slabih činjenica.</div>';
-        } else {
-            for (const h of data.hints) {
-                const div = document.createElement('div');
-                div.className = 'hint-row';
-                div.innerHTML =
-                    `(potez ${h.turnNumber}) <strong>${h.player}</strong> ima bar jednu od: ` +
-                    h.candidateCards.map(c => `<span class="tag tag-result">${c}</span>`).join('');
-                hintsEl.appendChild(div);
-            }
+            tbl.appendChild(tbody);
+            cont.appendChild(tbl);
         }
     }
 
+    function renderStrategic() {
+        const s = state.strategicOutput;
+
+        renderList('gameStates', s.gameStates, gs => {
+            const phase = (gs.match(/GameState\((\w+)\)/) || [])[1] || '?';
+            return `<span class="badge ${phaseClass(phase)}">${phase}</span> ${gs}`;
+        });
+
+        renderList('recommendations', s.recommendations, r => r);
+
+        renderList('profiles', s.profiles, p => {
+            const m = p.match(/PlayerProfile\((\w+) -> (\w+)\)/);
+            if (m) return `<strong>${m[1]}</strong> <span class="badge ${profileClass(m[2])}">${m[2]}</span>`;
+            return p;
+        });
+
+        renderList('riskWarnings', s.riskWarnings, w => {
+            const level = (w.match(/RiskWarning\[(\w+)/) || [])[1] || '?';
+            return `<span class="badge ${riskClass(level)}">${level}</span> ${w}`;
+        });
+
+        const knowsEl = document.getElementById('knowsCards');
+        knowsEl.innerHTML = '';
+        if (s.knowsCards && s.knowsCards.length) {
+            const byPlayer = {};
+            for (const k of s.knowsCards) {
+                const m = k.match(/KnowsCard\[(\w+) zna za (\w+)\]/);
+                if (m) {
+                    if (!byPlayer[m[1]]) byPlayer[m[1]] = [];
+                    byPlayer[m[1]].push(m[2]);
+                }
+            }
+            for (const [pl, cards] of Object.entries(byPlayer)) {
+                const d = document.createElement('div');
+                d.className = 'card';
+                d.innerHTML = `<strong>${pl}</strong>: ` +
+                    cards.map(c => `<span class="tag tag-result">${c}</span>`).join('');
+                knowsEl.appendChild(d);
+            }
+        } else {
+            knowsEl.innerHTML = '<div class="card-empty">Nema podataka.</div>';
+        }
+
+        renderList('roomFocuses', s.roomFocuses, rf => rf);
+        renderList('highSuspicions', s.highSuspicions, hs => hs);
+    }
+
+    /* ----- Show recommendation: prikazi sta da pokazem kad sam pokazivac ----- */
+    function renderShowRecommendation() {
+        updateShowRecommendationVisibility();
+    }
+
+    function updateShowRecommendationVisibility() {
+        const box = document.getElementById('showRecommendationBox');
+        const content = document.getElementById('showRecommendationContent');
+        const shw = document.getElementById('shower');
+        const me = myName();
+
+        // Prikazi samo kad SAM JA pokazivac
+        if (!shw || shw.value !== me) {
+            box.classList.add('hidden');
+            return;
+        }
+
+        const suspectSel = document.getElementById('suspect');
+        const weaponSel = document.getElementById('weapon');
+        const roomSel = document.getElementById('room');
+        const sugCards = [suspectSel.value, weaponSel.value, roomSel.value].filter(c => c);
+        const myCards = parseCsv('inMyCards');
+        const myMatching = sugCards.filter(c => myCards.includes(c));
+
+        // Ako imam samo jednu kartu iz sugestije, nema sta da preporucim
+        if (myMatching.length < 2) {
+            box.classList.add('hidden');
+            return;
+        }
+
+        // Imam 2+ karte - parsiraj showRecommendations iz state-a
+        const recs = (state.strategicOutput.showRecommendations || []);
+        // ShowRecommendation format: ShowRecommendation[card -> reason]
+        const parsed = [];
+        for (const r of recs) {
+            const m = r.match(/ShowRecommendation\[(\w+):\s*(.+?)\]$/)
+                || r.match(/ShowRecommendation\((\w+)\):\s*(.+)$/)
+                || r.match(/ShowRecommendation.*?card=(\w+).*?reason=(.+?)[\)\]]/);
+            if (m) {
+                parsed.push({card: m[1], reason: m[2]});
+            } else {
+                parsed.push({card: null, reason: r});
+            }
+        }
+
+        // Filtriraj samo preporuke za karte koje su u mojim matching karta
+        const relevant = parsed.filter(p => !p.card || myMatching.includes(p.card));
+
+        if (relevant.length === 0) {
+            // Nema specificne preporuke - prikazi samo sve moje matching karte kao opcije
+            box.classList.remove('hidden');
+            content.innerHTML = `<div class="show-rec-row">
+                Imaš <strong>${myMatching.length}</strong> karte iz sugestije. Možeš pokazati: ` +
+                myMatching.map(c => `<span class="tag tag-result">${c}</span>`).join('') +
+                `</div>`;
+            return;
+        }
+
+        box.classList.remove('hidden');
+        content.innerHTML = relevant.map(p => {
+            if (p.card) {
+                return `<div class="show-rec-row">Pokaži <strong>${p.card}</strong>: ${p.reason}</div>`;
+            }
+            return `<div class="show-rec-row">${p.reason}</div>`;
+        }).join('');
+    }
+
+    function renderList(elId, items, formatter) {
+        const el = document.getElementById(elId);
+        el.innerHTML = '';
+        if (!items || !items.length) {
+            el.innerHTML = '<div class="card-empty">Nema podataka.</div>';
+            return;
+        }
+        for (const it of items) {
+            const d = document.createElement('div');
+            d.className = 'card';
+            d.innerHTML = formatter(it);
+            el.appendChild(d);
+        }
+    }
+
+    function renderTurnLog() {
+        const log = document.getElementById('turnLog');
+        log.innerHTML = '';
+        const turns = state.table.turns || [];
+        if (!turns.length) {
+            log.innerHTML = '<div class="card-empty">Još nema poteza.</div>';
+            return;
+        }
+        for (const t of turns) {
+            const div = document.createElement('div');
+            div.className = 'turn-log-row';
+            let result;
+            if (t.revealedCard) {
+                result = `<strong>${t.shower}</strong> pokazao <span class="tag tag-result">${t.revealedCard}</span>`;
+            } else if (t.isPrivate) {
+                result = `<strong>${t.shower}</strong> → <strong>${t.shownTo}</strong> (privatno)`;
+            } else {
+                result = 'niko nije pokazao';
+            }
+            const noShows = (t.noShowPlayers || []).length > 0
+                ? ` · preskočili: ${t.noShowPlayers.join(', ')}` : '';
+            div.innerHTML =
+                `<span class="turn-num">${t.number}</span>` +
+                `<strong>${t.suggester}</strong>: ` +
+                `<span class="tag tag-suspect">${t.suspect}</span>` +
+                `<span class="tag tag-weapon">${t.weapon}</span>` +
+                `<span class="tag tag-room">${t.room}</span> ` +
+                `→ ${result}${noShows}`;
+            log.appendChild(div);
+        }
+    }
+
+    /* ----- Hints: prikazi aktivne disjunkcije sa eliminisanim opcijama ----- */
+    function renderHints() {
+        const el = document.getElementById('hints');
+        el.innerHTML = '';
+        const hints = state.table.hints || [];
+        if (!hints.length) {
+            el.innerHTML = '<div class="card-empty">Nema aktivnih disjunkcija.</div>';
+            return;
+        }
+
+        // Parsiraj NotOwns za prikaz eliminisanih kandidata
+        const notOwnsSet = parseNotOwnsSet();
+
+        for (const h of hints) {
+            const d = document.createElement('div');
+            d.className = 'hint-row';
+
+            const cardsHtml = h.candidateCards.map(c => {
+                const eliminated = notOwnsSet.has(h.player + ':' + c);
+                if (eliminated) {
+                    return `<span class="tag tag-result" style="text-decoration:line-through;opacity:0.5">${c}</span>`;
+                }
+                return `<span class="tag tag-result">${c}</span>`;
+            }).join('');
+
+            const remaining = h.candidateCards.filter(c => !notOwnsSet.has(h.player + ':' + c));
+            let status = '';
+            if (remaining.length === 1) {
+                status = ` <strong style="color:#155724">→ mora biti ${remaining[0]}</strong>`;
+                d.classList.add('resolved');
+            } else if (remaining.length === 0) {
+                status = ` <em style="color:#888">(razrešeno)</em>`;
+                d.classList.add('resolved');
+            }
+
+            d.innerHTML = `(potez ${h.turnNumber}) <strong>${h.player}</strong> ima bar jednu od: ${cardsHtml}${status}`;
+            el.appendChild(d);
+        }
+    }
+
+    /* ----- Conclusions: prikazi novootkrivene NotOwns ciji izvor je PrivateShow ----- */
+    function renderConclusions() {
+        const el = document.getElementById('conclusions');
+        el.innerHTML = '';
+
+        // Logika: ako Owns ili NotOwns proizilazi iz disjunkcije (PrivateShow grupisanja),
+        // prikazi ih ovde. Najlakse: prikazi sve NotOwns gde igrac ima aktivnu disjunkciju
+        // koja je razresena.
+
+        const hints = state.table.hints || [];
+        const owns = state.knowledgeSnapshot.owns || [];
+        const notOwnsSet = parseNotOwnsSet();
+        const ownsSet = parseOwnsSet();
+
+        const conclusions = [];
+
+        for (const h of hints) {
+            const remaining = h.candidateCards.filter(c => !notOwnsSet.has(h.player + ':' + c));
+            if (remaining.length === 1) {
+                // Disjunkcija razresena -> igrac mora imati ovu kartu
+                const card = remaining[0];
+                conclusions.push({
+                    player: h.player,
+                    card: card,
+                    turnNumber: h.turnNumber,
+                    type: 'must-own'
+                });
+            }
+        }
+
+        // Prikazi i Owns koji su izvedeni a nisu inicijalni (heuristika: igrac nije ja)
+        const meName = myName();
+        for (const ownStr of owns) {
+            // Pokusaj da parsiramo "Owns[Player -> Card]" ili slicno
+            const m = ownStr.match(/Owns\[(\w+)\s*->\s*(\w+)\]/)
+                || ownStr.match(/Owns\((\w+),\s*(\w+)\)/)
+                || ownStr.match(/player=(\w+).*?card=(\w+)/);
+            if (m && m[1] !== meName) {
+                // Ne dupliraj ono sto je vec u conclusions iz hints
+                const alreadyIn = conclusions.some(c => c.player === m[1] && c.card === m[2]);
+                if (!alreadyIn) {
+                    conclusions.push({
+                        player: m[1],
+                        card: m[2],
+                        turnNumber: null,
+                        type: 'derived-owns'
+                    });
+                }
+            }
+        }
+
+        if (conclusions.length === 0) {
+            el.innerHTML = '<div class="card-empty">Još nema zaključaka iz privatnih show-ova.</div>';
+            return;
+        }
+
+        for (const c of conclusions) {
+            const d = document.createElement('div');
+            d.className = 'conclusion-row';
+            const turnInfo = c.turnNumber ? `(disjunkcija iz poteza ${c.turnNumber}) ` : '';
+            const verb = c.type === 'must-own' ? 'mora imati' : 'ima';
+            d.innerHTML = `${turnInfo}<strong>${c.player}</strong> ${verb} <span class="tag tag-result">${c.card}</span>`;
+            el.appendChild(d);
+        }
+    }
+
+    /* ----- Helper: parsuj NotOwns u Set "player:card" ----- */
+    function parseNotOwnsSet() {
+        const result = new Set();
+        const notOwns = state.knowledgeSnapshot.notOwns || [];
+        for (const s of notOwns) {
+            const m = s.match(/NotOwns\[(\w+)\s*->\s*(\w+)\]/)
+                || s.match(/NotOwns\((\w+),\s*(\w+)\)/)
+                || s.match(/player=(\w+).*?card=(\w+)/);
+            if (m) result.add(m[1] + ':' + m[2]);
+        }
+        return result;
+    }
+
+    function parseOwnsSet() {
+        const result = new Set();
+        const owns = state.knowledgeSnapshot.owns || [];
+        for (const s of owns) {
+            const m = s.match(/Owns\[(\w+)\s*->\s*(\w+)\]/)
+                || s.match(/Owns\((\w+),\s*(\w+)\)/)
+                || s.match(/player=(\w+).*?card=(\w+)/);
+            if (m) result.add(m[1] + ':' + m[2]);
+        }
+        return result;
+    }
+
+    function renderBackward() {
+        const bc = state.knowledgeSnapshot.backwardChaining;
+        const el = document.getElementById('backward');
+        el.innerHTML = '';
+
+        if (bc.solutionFound) {
+            const d = document.createElement('div');
+            d.className = 'card';
+            d.innerHTML = `<span class="badge badge-state-solved">✓ REŠENJE</span> ` +
+                `<span class="tag tag-suspect">${bc.solution.suspect}</span>` +
+                `<span class="tag tag-weapon">${bc.solution.weapon}</span>` +
+                `<span class="tag tag-room">${bc.solution.room}</span>`;
+            el.appendChild(d);
+        }
+
+        if (bc.cardsInEnvelope && bc.cardsInEnvelope.length) {
+            const d = document.createElement('div');
+            d.className = 'card';
+            d.innerHTML = `<strong>U koverti:</strong> ` +
+                bc.cardsInEnvelope.map(c => `<span class="tag tag-result">${c}</span>`).join('');
+            el.appendChild(d);
+        }
+
+        if (bc.onlyCandidatesInCategory && bc.onlyCandidatesInCategory.length) {
+            const d = document.createElement('div');
+            d.className = 'card';
+            d.innerHTML = `<strong>Jedini kandidati u kategoriji:</strong> ` +
+                bc.onlyCandidatesInCategory.map(c => `<span class="tag tag-result">${c}</span>`).join('');
+            el.appendChild(d);
+        }
+
+        if (!el.innerHTML) {
+            el.innerHTML = '<div class="card-empty">Nema zaključaka iz backward chaining-a.</div>';
+        }
+    }
+
+    /* =========================================================
+       HELPERS
+       ========================================================= */
     function categoryLabel(cat) {
         if (cat === 'SUSPECT') return 'Osumnjičeni';
         if (cat === 'WEAPON') return 'Oružje';
         if (cat === 'ROOM') return 'Prostorije';
         return cat;
     }
-
-    load().catch(err => {
-        document.getElementById('meta').textContent = 'Greška: ' + err.message;
-    });
+    function phaseClass(p) {
+        if (p.includes('EARLY')) return 'badge-state-early';
+        if (p.includes('MID')) return 'badge-state-mid';
+        if (p.includes('LATE')) return 'badge-state-late';
+        if (p.includes('SOLVED')) return 'badge-state-solved';
+        return 'badge-state-mid';
+    }
+    function riskClass(level) {
+        if (level === 'HIGH') return 'badge-risk-high';
+        if (level === 'MID' || level === 'MEDIUM') return 'badge-risk-mid';
+        return 'badge-risk-low';
+    }
+    function profileClass(p) {
+        if (p === 'BLUFFING') return 'badge-profile-bluff';
+        if (p === 'DEFENSIVE' || p === 'DEFENSIVAN') return 'badge-profile-defens';
+        if (p === 'AGGRESSIVE' || p === 'AGRESIVAN') return 'badge-profile-aggr';
+        return 'badge-profile-defens';
+    }
+    function toast(msg, error = false) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast show' + (error ? ' error' : '');
+        setTimeout(() => t.className = 'toast', 2500);
+    }
 </script>
 
 </body>

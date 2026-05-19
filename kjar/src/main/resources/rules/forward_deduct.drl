@@ -85,11 +85,11 @@ rule "5.1.2e Sopstvena karta kategorije ->  NotOwns nijednu drugu kartu te kateg
         insert(new NotOwns($self, $otherCard));
 end
 
-rule "5.1.2f Protivnik Owns = 3 -> NotOwns ostale karte"
+rule "5.1.2f Protivnik Owns = handSize -> NotOwns ostale karte"
     when
-        $p: Player(self == false)
+        $p: Player(self == false, $hs: handSize)
 
-        Number(intValue >= 3) from accumulate(
+        Number(intValue >= $hs) from accumulate(
             Owns(player == $p),
             count(1)
         )
@@ -101,7 +101,6 @@ rule "5.1.2f Protivnik Owns = 3 -> NotOwns ostale karte"
     then
         insert(new NotOwns($p, $card));
 end
-
 rule "5.1.3a - Karta koju niko ne poseduje je u koverti"
     when
         $card: Card($cName: name)
