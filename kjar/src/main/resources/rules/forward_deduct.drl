@@ -71,32 +71,32 @@ rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
 end
 
 
-rule "5.1.2d - NoShow -> NotOwns za suspect"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getSuspect()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-end
-
-rule "5.1.2d - NoShow -> NotOwns za weapon"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getWeapon()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-end
-
-rule "5.1.2d - NoShow -> NotOwns za room"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getRoom()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-end
+//rule "5.1.2d - NoShow -> NotOwns za suspect"
+//    when
+//        NoShow($p: player, $sug: suggestion)
+//        $card: Card() from $sug.getSuspect()
+//        not NotOwns(player == $p, card == $card)
+//    then
+//        insert(new NotOwns($p, $card));
+//end
+//
+//rule "5.1.2d - NoShow -> NotOwns za weapon"
+//    when
+//        NoShow($p: player, $sug: suggestion)
+//        $card: Card() from $sug.getWeapon()
+//        not NotOwns(player == $p, card == $card)
+//    then
+//        insert(new NotOwns($p, $card));
+//end
+//
+//rule "5.1.2d - NoShow -> NotOwns za room"
+//    when
+//        NoShow($p: player, $sug: suggestion)
+//        $card: Card() from $sug.getRoom()
+//        not NotOwns(player == $p, card == $card)
+//    then
+//        insert(new NotOwns($p, $card));
+//end
 
 rule "5.1.2e Sopstvena karta kategorije ->  NotOwns nijednu drugu kartu te kategorije"
     when
@@ -153,35 +153,38 @@ rule "5.1.3b - Karta u koverti -> Score = 100"
         System.out.println("[5.1.3b] " + $card.getName() + " Score = 100 (potvrđeno rešenje)");
 end
 
-rule "5.1.4 PrivateShow: dve od tri eliminisane -> treca je Owns (suspect ostao)"
-    when
-        PrivateShow($p: shower, $sug: suggestion)
-        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
-        NotOwns(player == $p, card == $wCard)
-        NotOwns(player == $p, card == $rCard)
-        not Owns(player == $p, card == $sCard)
-    then
-        insert(new Owns($p, $sCard));
-end
-
-rule "5.1.4 PrivateShow: dve od tri eliminisane -> treca je Owns (weapon ostao)"
-    when
-        PrivateShow($p: shower, $sug: suggestion)
-        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
-        NotOwns(player == $p, card == $sCard)
-        NotOwns(player == $p, card == $rCard)
-        not Owns(player == $p, card == $wCard)
-    then
-        insert(new Owns($p, $wCard));
-end
-
-rule "5.1.4 PrivateShow: dve od tri eliminisane -> treca je Owns (room ostao)"
-    when
-        PrivateShow($p: shower, $sug: suggestion)
-        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
-        NotOwns(player == $p, card == $sCard)
-        NotOwns(player == $p, card == $wCard)
-        not Owns(player == $p, card == $rCard)
-    then
-        insert(new Owns($p, $rCard));
-end
+//rule "5.1.4 PrivateShow: dve od tri eliminisane -> treca je Owns (suspect ostao)"
+//    when
+//        PrivateShow($p: shower, $sug: suggestion)
+//        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
+//        NotOwns(player == $p, card == $wCard)
+//        NotOwns(player == $p, card == $rCard)
+//        not Owns(player == $p, card == $sCard)
+//    then
+//        System.out.println("[5.1.4] PrivateShow: " + $p.getName() + " ima " + $sCard.getName() + " (suspect ostao, weapon i room eliminisani)");
+//        insert(new Owns($p, $sCard));
+//end
+//
+//rule "5.1.4 PrivateShow: dve od tri eliminisane -> treca je Owns (weapon ostao)"
+//    when
+//        PrivateShow($p: shower, $sug: suggestion)
+//        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
+//        NotOwns(player == $p, card == $sCard)
+//        NotOwns(player == $p, card == $rCard)
+//        not Owns(player == $p, card == $wCard)
+//    then
+//        System.out.println("[5.1.4] PrivateShow: " + $p.getName() + " ima " + $wCard.getName() + " (weapon ostao, suspect i room eliminisani)");
+//        insert(new Owns($p, $wCard));
+//end
+//
+//rule "5.1.4 PrivateShow: dve od tri eliminisane -> treca je Owns (room ostao)"
+//    when
+//        PrivateShow($p: shower, $sug: suggestion)
+//        Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
+//        NotOwns(player == $p, card == $sCard)
+//        NotOwns(player == $p, card == $wCard)
+//        not Owns(player == $p, card == $rCard)
+//    then
+//        System.out.println("[5.1.4] PrivateShow: " + $p.getName() + " ima " + $rCard.getName() + " (room ostao, suspect i weapon eliminisani)");
+//        insert(new Owns($p, $rCard));
+//end

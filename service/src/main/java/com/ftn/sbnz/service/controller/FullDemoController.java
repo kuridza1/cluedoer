@@ -147,11 +147,12 @@ public class FullDemoController {
         int f5 = ks.fireAllRules();
 
         t = clock.getCurrentTime();
-        Suggestion sug6 = new Suggestion(6, t, ja, suspects.get(0), weapons.get(5), rooms.get(7));
+        Suggestion sug6 = new Suggestion(6, t, ja, suspects.get(0), weapons.get(0), rooms.get(7));
         ks.insert(sug6);
         ks.insert(new NoShow(A, sug6, t));
         ks.insert(new NoShow(B, sug6, t));
-        ks.insert(new Reveal(C, weapons.get(5)));
+        ks.insert(new NoShow(C, sug6, t));
+        ks.insert(new Reveal(D, weapons.get(0)));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f6 = ks.fireAllRules();
 
@@ -199,62 +200,62 @@ public class FullDemoController {
         ks.insert(new PrivateShow(A, E, sug11, t));
         clock.advanceTime(1, TimeUnit.MINUTES);
         int f11 = ks.fireAllRules();
-
-        t = clock.getCurrentTime();
-        Suggestion sug12 = new Suggestion(12, t, ja, suspects.get(0), weapons.get(1), rooms.get(2));
-        ks.insert(sug12);
-        ks.insert(new NoShow(A, sug12, t));
-        ks.insert(new NoShow(B, sug12, t));
-        ks.insert(new NoShow(C, sug12, t));
-        ks.insert(new NoShow(D, sug12, t));
-        ks.insert(new NoShow(E, sug12, t));
-        clock.advanceTime(1, TimeUnit.MINUTES);
-        int f12= ks.fireAllRules();
-
-        t = clock.getCurrentTime();
-        Suggestion sug13 = new Suggestion(13, t, A, suspects.get(0), weapons.get(2), rooms.get(8));
-// A: Green, Revolver, BilijarSoba
-        ks.insert(sug13);
-        ks.insert(new PrivateShow(B, A, sug13, t));   // B pokazuje BilijarSoba
-        clock.advanceTime(1, TimeUnit.MINUTES);
-        int f13 = ks.fireAllRules();
-
-        t = clock.getCurrentTime();
-        Suggestion sug14 = new Suggestion(14, t, B, suspects.get(0), weapons.get(2), rooms.get(5));
-// B: Green, Revolver, Hodnik
-        ks.insert(sug14);
-        ks.insert(new NoShow(C, sug14, t));
-        ks.insert(new PrivateShow(D, B, sug14, t));   // D pokazuje Hodnik
-        clock.advanceTime(1, TimeUnit.MINUTES);
-        int f14 = ks.fireAllRules();
-
-        t = clock.getCurrentTime();
-        Suggestion sug15 = new Suggestion(15, t, C, suspects.get(0), weapons.get(2), rooms.get(3));
-// C: Green, Revolver, Trpezarija
-        ks.insert(sug15);
-        ks.insert(new PrivateShow(A, C, sug15, t));   // A pokazuje Trpezarija
-        clock.advanceTime(1, TimeUnit.MINUTES);
-        int f15 = ks.fireAllRules();
-
-        t = clock.getCurrentTime();
-        Suggestion sug16 = new Suggestion(16, t, D, suspects.get(0), weapons.get(2), rooms.get(7));
-// D: Green, Revolver, Biblioteka
-        ks.insert(sug16);
-        ks.insert(new PrivateShow(E, D, sug16, t));   // E pokazuje Biblioteka
-        clock.advanceTime(1, TimeUnit.MINUTES);
-        int f16 = ks.fireAllRules();
-
-        t = clock.getCurrentTime();
-        Suggestion sug17 = new Suggestion(17, t, E, suspects.get(0), weapons.get(2), rooms.get(6));
-// E: Green, Revolver, RadnaSoba — svi NoShow jer E ima RadnaSoba u rukama
-        ks.insert(sug17);
-        ks.insert(new NoShow(ja, sug17, t));
-        ks.insert(new NoShow(A, sug17, t));
-        ks.insert(new NoShow(B, sug17, t));
-        ks.insert(new NoShow(C, sug17, t));
-        ks.insert(new NoShow(D, sug17, t));
-        clock.advanceTime(1, TimeUnit.MINUTES);
-        int f17 = ks.fireAllRules();
+//
+//        t = clock.getCurrentTime();
+//        Suggestion sug12 = new Suggestion(12, t, ja, suspects.get(0), weapons.get(1), rooms.get(2));
+//        ks.insert(sug12);
+//        ks.insert(new NoShow(A, sug12, t));
+//        ks.insert(new NoShow(B, sug12, t));
+//        ks.insert(new NoShow(C, sug12, t));
+//        ks.insert(new NoShow(D, sug12, t));
+//        ks.insert(new NoShow(E, sug12, t));
+//        clock.advanceTime(1, TimeUnit.MINUTES);
+//        int f12= ks.fireAllRules();
+//
+//        t = clock.getCurrentTime();
+//        Suggestion sug13 = new Suggestion(13, t, A, suspects.get(0), weapons.get(2), rooms.get(8));
+//// A: Green, Revolver, BilijarSoba
+//        ks.insert(sug13);
+//        ks.insert(new PrivateShow(B, A, sug13, t));   // B pokazuje BilijarSoba
+//        clock.advanceTime(1, TimeUnit.MINUTES);
+//        int f13 = ks.fireAllRules();
+//
+//        t = clock.getCurrentTime();
+//        Suggestion sug14 = new Suggestion(14, t, B, suspects.get(0), weapons.get(2), rooms.get(5));
+//// B: Green, Revolver, Hodnik
+//        ks.insert(sug14);
+//        ks.insert(new NoShow(C, sug14, t));
+//        ks.insert(new PrivateShow(D, B, sug14, t));   // D pokazuje Hodnik
+//        clock.advanceTime(1, TimeUnit.MINUTES);
+//        int f14 = ks.fireAllRules();
+//
+//        t = clock.getCurrentTime();
+//        Suggestion sug15 = new Suggestion(15, t, C, suspects.get(0), weapons.get(2), rooms.get(3));
+//// C: Green, Revolver, Trpezarija
+//        ks.insert(sug15);
+//        ks.insert(new PrivateShow(A, C, sug15, t));   // A pokazuje Trpezarija
+//        clock.advanceTime(1, TimeUnit.MINUTES);
+//        int f15 = ks.fireAllRules();
+//
+//        t = clock.getCurrentTime();
+//        Suggestion sug16 = new Suggestion(16, t, D, suspects.get(0), weapons.get(2), rooms.get(7));
+//// D: Green, Revolver, Biblioteka
+//        ks.insert(sug16);
+//        ks.insert(new PrivateShow(E, D, sug16, t));   // E pokazuje Biblioteka
+//        clock.advanceTime(1, TimeUnit.MINUTES);
+//        int f16 = ks.fireAllRules();
+//
+//        t = clock.getCurrentTime();
+//        Suggestion sug17 = new Suggestion(17, t, E, suspects.get(0), weapons.get(2), rooms.get(6));
+//// E: Green, Revolver, RadnaSoba — svi NoShow jer E ima RadnaSoba u rukama
+//        ks.insert(sug17);
+//        ks.insert(new NoShow(ja, sug17, t));
+//        ks.insert(new NoShow(A, sug17, t));
+//        ks.insert(new NoShow(B, sug17, t));
+//        ks.insert(new NoShow(C, sug17, t));
+//        ks.insert(new NoShow(D, sug17, t));
+//        clock.advanceTime(1, TimeUnit.MINUTES);
+//        int f17 = ks.fireAllRules();
 
         boolean backwardSolved = runBackwardQuery(ks);
 

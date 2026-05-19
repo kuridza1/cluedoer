@@ -36,6 +36,14 @@ public class Suggestion {
         this.timestamp = timestamp;
     }
 
+    public Card getCardByCategory(String category) {
+        switch (category) {
+            case "suspect": return suspect;
+            case "weapon": return weapon;
+            case "room": return room;
+            default: return null;
+        }
+    }
 
     @Override
     public String toString() {
