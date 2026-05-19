@@ -38,28 +38,17 @@ declare PrivateShow
 end
 
 
-// ============================================================================
-// NIVO 2 - sekcija 5.2.3: Heurističko skorovanje
-// Svako pravilo ima ScoreApplied marker da se ne aktivira više puta
-// za istu kombinaciju (sprečava infinite loop i monotono raste do max).
-// ============================================================================
 
-// 5.2.3a: karta se javlja u 3+ sugestija bez Reveal-a u prozoru -> +3
-// (Pojačali smo bonus jer je ovo najznačajniji signal heuristike.)
 rule "5.2.3a - Karta u 3+ sugestija bez Reveal-a -> Score += 3"
     when
         $card: Card($cName: name)
-        // Bar 3 sugestije sadrže ovu kartu (u poslednjih 10 sugestija)
         Number(intValue >= 3) from accumulate(
             $s: Suggestion(suspect == $card || weapon == $card || room == $card)
                 over window:length(10),
             count($s)
         )
-        // Nijedan Reveal za ovu kartu (u poslednjih 10 reveal-a)
         not Reveal(card == $card)
-        // Karta još uvek kandidat (Score > 0)
         $cs: CardScore(card == $card, score > 0)
-        // Nismo već aplicirali bonus
         not ScoreApplied(ruleId == "5.2.3a", key == $cName)
     then
         modify($cs) { setScore($cs.getScore() + 3) };
@@ -68,22 +57,17 @@ rule "5.2.3a - Karta u 3+ sugestija bez Reveal-a -> Score += 3"
                 + $cs.getScore() + ")");
 end
 
-// 5.2.3b: sugestija ima 2+ NoShow odgovora i NIJEDAN PrivateShow/Reveal
-// -> sve tri karte sugestije dobijaju +2
-// (Indikator: sugestija nije "neutralizovana" - niko nije imao karte da pokaže)
+
 rule "5.2.3b - Sugestija bez ijednog pokazivanja -> Score += 2 za sve karte"
     when
         $sug: Suggestion($sCard: suspect, $wCard: weapon, $rCard: room, $sugId: turnNumber)
-        // Bar 2 NoShow event-a za ovu sugestiju
         Number(intValue >= 2) from accumulate(
             $ns: NoShow(suggestion == $sug),
             count($ns)
         )
-        // Niko nije pokazao - ni PrivateShow ni Reveal za karte sugestije
         not PrivateShow(suggestion == $sug)
         $card: Card(this == $sCard || this == $wCard || this == $rCard, $cName: name)
         $cs: CardScore(card == $card, score > 0)
-        // Marker po (sugestija, karta) - sprečava ponavljanje
         not ScoreApplied(ruleId == "5.2.3b", key == ($sugId + ":" + $cName))
     then
         modify($cs) { setScore($cs.getScore() + 2) };
@@ -92,9 +76,6 @@ rule "5.2.3b - Sugestija bez ijednog pokazivanja -> Score += 2 za sve karte"
                 + $cName + ") += 2 (sada " + $cs.getScore() + ")");
 end
 
-// 5.2.3c: karta NIKAD nije pokazana posle 6+ poteza i nije sigurno tuđa
-// -> +1 (slabiji bonus jer pravilo gađa puno karata)
-// SAMO za karte koje ne pripadaju nijednom poznatom vlasniku.
 rule "5.2.3c - Karta nikad pokazana posle 6+ poteza -> Score += 1"
     when
         $card: Card($cName: name)
@@ -103,7 +84,7 @@ rule "5.2.3c - Karta nikad pokazana posle 6+ poteza -> Score += 1"
             count($s)
         )
         not Reveal(card == $card)
-        not Owns(card == $card)  // Ako neko sigurno ima kartu, preskoči
+        not Owns(card == $card)
         $cs: CardScore(card == $card, score > 0)
         not ScoreApplied(ruleId == "5.2.3c", key == $cName)
     then

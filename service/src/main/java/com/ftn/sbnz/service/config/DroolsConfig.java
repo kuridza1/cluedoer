@@ -19,8 +19,7 @@ public class DroolsConfig {
         KieFileSystem kfs = ks.newKieFileSystem();
 
         String[] drlPaths = {
-                "rules/backward_deduct.drl",
-                "rules/backward_strat.drl",
+                "rules/backward.drl",
                 "rules/cep_deduct.drl",
                 "rules/cep_strat.drl",
                 "rules/forward_deduct.drl",
