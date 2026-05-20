@@ -44,6 +44,19 @@ public class DroolsConfig {
         System.out.println("========== END ==========");
         kfs.write("src/main/resources/rules/PrivateShowGenerated.drl", generatedPrivateShow);
 
+        String generatedGameState = TemplateLoader.generateGameStateRules();
+
+        System.out.println("========== GameStateGenerated.drl ==========");
+        System.out.println(generatedGameState);
+        System.out.println("========== END ==========");
+        kfs.write("src/main/resources/rules/GameStateGenerated.drl", generatedGameState);
+
+        String generatedSuggest = TemplateLoader.generateSuggestCardRules();
+        System.out.println("========== SuggestCardGenerated.drl ==========");
+        System.out.println(generatedSuggest);
+        System.out.println("========== END ==========");
+        kfs.write("src/main/resources/rules/SuggestCardGenerated.drl",generatedSuggest);
+
         kfs.writeKModuleXML(new String(
                 getClass().getResourceAsStream("/META-INF/kmodule.xml").readAllBytes()
         ));

@@ -40,6 +40,50 @@ public class TemplateLoader {
         return compiler.compile(rows, template);
     }
 
+    public static String generateGameStateRules() {
+        List<GameStateRow> rows = Arrays.asList(
+                new GameStateRow("0.0", "0.3", "EARLY_GAME"),
+                new GameStateRow("0.3", "0.7", "MID_GAME"),
+                new GameStateRow("0.7", "1.01", "LATE_GAME")
+        );
+
+        InputStream template = TemplateLoader.class
+                .getResourceAsStream("/rules/GameStateTemplate.drt");
+
+        ObjectDataCompiler compiler = new ObjectDataCompiler();
+        return compiler.compile(rows, template);
+    }
+
+    public static String generateSuggestCardRules() {
+
+        List<SuggestCardRow> rows = Arrays.asList(
+
+                new SuggestCardRow(
+                        "SUSPECT",
+                        "and not Owns(card == $c)",
+                        "not Owns(card == $card)"
+                ),
+
+                new SuggestCardRow(
+                        "WEAPON",
+                        "and not Owns(card == $c)",
+                        "not Owns(card == $card)"
+                ),
+
+                new SuggestCardRow(
+                        "ROOM",
+                        "",
+                        ""
+                )
+        );
+        InputStream template = TemplateLoader.class
+                .getResourceAsStream("/rules/SuggestCardTemplate.drt");
+
+        ObjectDataCompiler compiler = new ObjectDataCompiler();
+
+        return compiler.compile(rows, template);
+    }
+
     public static KieContainer buildContainerWithTemplate() throws IOException {
         KieServices ks = KieServices.Factory.get();
         KieFileSystem kfs = ks.newKieFileSystem();

@@ -23,63 +23,6 @@ import com.ftn.sbnz.model.SuggestCard;
 
 
 // ============================================================================
-// 6.1 - PROCENA STANJA IGRE
-// Fiksiran retract problem: stari GameState se uvek retractuje pre inserta
-// novog, tako da u working memoriji postoji tacno jedan GameState u svakom
-// trenutku.
-// ============================================================================
-
-rule "6.1 - EARLY GAME"
-salience 10
-when
-    $total: Number() from accumulate(Card($c: this), count($c))
-    $elim:  Number() from accumulate(CardScore(score == 0), count(1))
-    eval(((double) $elim.intValue() / $total.intValue()) < 0.3)
-    not GameState(status == GameStatus.EARLY_GAME)
-then
-    // Retractuj sve stare GameState cinjenice
-    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof GameState)) {
-        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
-    }
-    insert(new GameState(GameStatus.EARLY_GAME));
-    System.out.println("[6.1] GAME STATE -> EARLY_GAME");
-end
-
-
-rule "6.1 - MID GAME"
-salience 10
-when
-    $total: Number() from accumulate(Card($c: this), count($c))
-    $elim:  Number() from accumulate(CardScore(score == 0), count(1))
-    eval(((double) $elim.intValue() / $total.intValue()) >= 0.3 &&
-         ((double) $elim.intValue() / $total.intValue()) <= 0.7)
-    not GameState(status == GameStatus.MID_GAME)
-then
-    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof GameState)) {
-        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
-    }
-    insert(new GameState(GameStatus.MID_GAME));
-    System.out.println("[6.1] GAME STATE -> MID_GAME");
-end
-
-
-rule "6.1 - LATE GAME"
-salience 10
-when
-    $total: Number() from accumulate(Card($c: this), count($c))
-    $elim:  Number() from accumulate(CardScore(score == 0), count(1))
-    eval(((double) $elim.intValue() / $total.intValue()) > 0.7)
-    not GameState(status == GameStatus.LATE_GAME)
-then
-    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof GameState)) {
-        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
-    }
-    insert(new GameState(GameStatus.LATE_GAME));
-    System.out.println("[6.1] GAME STATE -> LATE_GAME");
-end
-
-
-// ============================================================================
 // 6.1.1 - PROFILISANJE PROTIVNIKA
 // ============================================================================
 
@@ -88,7 +31,7 @@ rule "6.1.1 - DEFENSIVE"
 when
     $p: Player(self == false)
     $c: Card()
-    $count: Number(intValue >= 3) from accumulate(
+    $count: Number(intValue >= 2) from accumulate(
         Reveal(revealer == $p, card == $c),
         count(1)
     )
@@ -118,6 +61,115 @@ then
     }
     insert(new Profile($p, ProfileType.BLUFFING));
     System.out.println("[6.1.1] PROFILE BLUFFING -> " + $p.getName());
+end
+
+rule "6.3.X - BLUFFING REDUCES TRUST IN SUGGESTIONS"
+when
+    Profile($p: player, profile == ProfileType.BLUFFING)
+
+    $s: Suggestion(suggester == $p)
+
+    $c: CardScore(
+        card == $s.suspect || card == $s.weapon || card == $s.room,
+        score > 0
+    )
+
+    not ScoreApplied(ruleId == "BLUFF_IMPACT", key == $p.getName() + ":" + $c.getCard().getName())
+then
+    modify($c) {
+        setScore($c.getScore() - 1)
+    };
+
+    insert(new ScoreApplied("BLUFF_IMPACT", $p.getName() + ":" + $c.getCard().getName()));
+
+    System.out.println("BLUFF IMPACT: -" + $c.getCard().getName());
+end
+
+rule "6.3.X - DEFENSIVE SUGGESTIONS ARE MORE INFORMATIVE"
+when
+    Profile($p: player, profile == ProfileType.DEFENSIVE)
+
+    $s: Suggestion(suggester == $p)
+
+    $c: CardScore(
+        card == $s.suspect || card == $s.weapon || card == $s.room,
+        score > 0
+    )
+
+    not ScoreApplied(ruleId == "DEF_SIGNAL", key == $p.getName() + ":" + $c.getCard().getName())
+then
+    modify($c) {
+        setScore($c.getScore() + 1)
+    };
+
+    insert(new ScoreApplied("DEF_SIGNAL", $p.getName() + ":" + $c.getCard().getName()));
+
+    System.out.println("DEFENSIVE SIGNAL +1 " + $c.getCard().getName());
+end
+
+rule "6.3.X - AGGRESSIVE REDUCES SCORE STABILITY"
+when
+    Profile($p: player, profile == ProfileType.AGGRESSIVE)
+
+    $s: Suggestion(suggester == $p)
+
+    $c: CardScore(
+        card == $s.suspect || card == $s.weapon || card == $s.room,
+        score > 1
+    )
+
+    not ScoreApplied(ruleId == "AGG_VOLATILITY", key == $p.getName() + ":" + $c.getCard().getName())
+then
+    modify($c) {
+        setScore($c.getScore() - 1)
+    };
+
+    insert(new ScoreApplied("AGG_VOLATILITY", $p.getName() + ":" + $c.getCard().getName()));
+end
+
+rule "6.3.X - ROOM FOCUS BOOST HYPOTHESIS"
+when
+    RoomFocus($p: player, $r: room)
+
+    $cs: CardScore(card == $r, score > 0)
+
+    not ScoreApplied(ruleId == "ROOM_FOCUS_BOOST", key == $p.getName() + ":" + $r.getName())
+then
+    modify($cs) {
+        setScore($cs.getScore() + 3)
+    };
+
+    insert(new ScoreApplied("ROOM_FOCUS_BOOST", $p.getName() + ":" + $r.getName()));
+end
+
+rule "6.3.X - KNOWN CARD HARD PENALTY"
+when
+    KnowsCard($p: player, $c: card)
+
+    $cs: CardScore(card == $c, score > 0)
+
+    not ScoreApplied(ruleId == "KNOWN_CARD_PENALTY", key == $p.getName() + ":" + $c.getName())
+then
+    modify($cs) {
+        setScore($cs.getScore() - 3)
+    };
+
+    insert(new ScoreApplied("KNOWN_CARD_PENALTY", $p.getName() + ":" + $c.getName()));
+end
+
+rule "6.3.X - HIGH SUSPICION MULTIPLIER"
+when
+    HighSuspicion($p: player, $c: card)
+
+    $cs: CardScore(card == $c)
+
+    not ScoreApplied(ruleId == "HS_BOOST", key == $p.getName() + ":" + $c.getName())
+then
+    modify($cs) {
+        setScore($cs.getScore() + 2)
+    };
+
+    insert(new ScoreApplied("HS_BOOST", $p.getName() + ":" + $c.getName()));
 end
 
 // ROOM FOCUS: protivnik je 3+ puta koristio istu prostoriju u sugestijama
@@ -371,86 +423,4 @@ then
     }
     insert(new RiskWarning(RiskLevel.LOW, null,
         "Nije detektovan rizik. Nastavi prema strategiji."));
-end
-
-// ============================================================================
-// 6.2.1 - PREPORUKA KOMPLETNE SUGESTIJE (S, W, R)
-// Bira kandidata sa najvišim score-om iz svake kategorije zasebno.
-// Tie-breaker: accumulate(min ime) po kategoriji — isti obrazac kao gore.
-// ============================================================================
-
-rule "6.2.1 - SUGGEST SUSPECT"
-salience 40
-no-loop true
-when
-    $maxS: Number() from accumulate(
-        CardScore($sx: score, score > 0, $cx: card)
-        and Card(this == $cx, type == CardType.SUSPECT)
-        and not Owns(card == $cx),
-        max($sx)
-    )
-    $best: CardScore($card: card, score == $maxS)
-    Card(this == $card, type == CardType.SUSPECT)
-    not Owns(card == $card)
-    not CardScore($c2: card, score == $maxS,
-        eval($c2 != $card && $c2.getType() == CardType.SUSPECT
-             && $c2.getName().compareTo($card.getName()) < 0)
-    )
-then
-    for (Object o : kcontext.getKieRuntime().getObjects(
-            obj -> obj instanceof SuggestCard && ((SuggestCard) obj).getCategory() == CardType.SUSPECT)) {
-        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
-    }
-    insert(new SuggestCard(CardType.SUSPECT, $card));
-    System.out.println("[6.2.1] SUGGEST SUSPECT -> " + $card.getName());
-end
-
-rule "6.2.1 - SUGGEST WEAPON"
-salience 40
-no-loop true
-when
-    $maxW: Number() from accumulate(
-        CardScore($sw: score, score > 0, $cw: card)
-        and Card(this == $cw, type == CardType.WEAPON)
-        and not Owns(card == $cw),
-        max($sw)
-    )
-    $best: CardScore($card: card, score == $maxW)
-    Card(this == $card, type == CardType.WEAPON)
-    not Owns(card == $card)
-    not CardScore($c2: card, score == $maxW,
-        eval($c2 != $card && $c2.getType() == CardType.WEAPON
-             && $c2.getName().compareTo($card.getName()) < 0)
-    )
-then
-    for (Object o : kcontext.getKieRuntime().getObjects(
-            obj -> obj instanceof SuggestCard && ((SuggestCard) obj).getCategory() == CardType.WEAPON)) {
-        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
-    }
-    insert(new SuggestCard(CardType.WEAPON, $card));
-    System.out.println("[6.2.1] SUGGEST WEAPON -> " + $card.getName());
-end
-
-rule "6.2.1 - SUGGEST ROOM"
-salience 40
-no-loop true
-when
-    $maxR: Number() from accumulate(
-        CardScore($sr: score, score > 0, $cr: card)
-        and Card(this == $cr, type == CardType.ROOM),
-        max($sr)
-    )
-    $best: CardScore($card: card, score == $maxR)
-    Card(this == $card, type == CardType.ROOM)
-    not CardScore($c2: card, score == $maxR,
-        eval($c2 != $card && $c2.getType() == CardType.ROOM
-             && $c2.getName().compareTo($card.getName()) < 0)
-    )
-then
-    for (Object o : kcontext.getKieRuntime().getObjects(
-            obj -> obj instanceof SuggestCard && ((SuggestCard) obj).getCategory() == CardType.ROOM)) {
-        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
-    }
-    insert(new SuggestCard(CardType.ROOM, $card));
-    System.out.println("[6.2.1] SUGGEST ROOM -> " + $card.getName());
 end

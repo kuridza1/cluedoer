@@ -333,3 +333,80 @@ then
 
     System.out.println("REMOVED OLD PROFILE for " + $p.getName());
 end
+
+// ============================================================================
+// 6.3.1a - EARLY/MID GAME SPAM = karta je verovatno bezbedna za protivnika
+// Smanjujemo score jer je manja sansa da je resenje.
+// ============================================================================
+
+rule "6.3.1a - EARLY MID SPAM PENALTY"
+salience 12
+when
+    GameState(status == GameStatus.EARLY_GAME || status == GameStatus.MID_GAME)
+
+    $hs: HighSuspicion($p: player, $c: card)
+
+    $cs: CardScore(card == $c, score > 1)
+
+    not ScoreApplied(
+        ruleId == "EARLY_SPAM_PENALTY",
+        key == ($p.getName() + ":" + $c.getName())
+    )
+
+then
+    modify($cs) {
+        setScore($cs.getScore() - 1)
+    };
+
+    insert(new ScoreApplied(
+        "EARLY_SPAM_PENALTY",
+        $p.getName() + ":" + $c.getName()
+    ));
+
+    System.out.println(
+        "[6.3.1a] EARLY/MID SPAM: -1 za "
+        + $c.getName()
+        + " (protivnik "
+        + $p.getName()
+        + " je previse koristi)"
+    );
+end
+
+
+// ============================================================================
+// 6.3.1b - LATE GAME SPAM = karta postaje veoma sumnjiva
+// U kasnoj igri igraci forsiraju karte koje misle da su resenje.
+// ============================================================================
+
+rule "6.3.1b - LATE GAME SPAM BONUS"
+salience 13
+when
+    GameState(status == GameStatus.LATE_GAME)
+
+    $hs: HighSuspicion($p: player, $c: card)
+
+    $cs: CardScore(card == $c, score > 0)
+
+    not ScoreApplied(
+        ruleId == "LATE_SPAM_BONUS",
+        key == ($p.getName() + ":" + $c.getName())
+    )
+
+then
+    modify($cs) {
+        setScore($cs.getScore() + 3)
+    };
+
+    insert(new ScoreApplied(
+        "LATE_SPAM_BONUS",
+        $p.getName() + ":" + $c.getName()
+    ));
+
+    System.out.println(
+        "[6.3.1b] LATE SPAM: +3 za "
+        + $c.getName()
+        + " (protivnik "
+        + $p.getName()
+        + " je opsesivno koristi u late game)"
+    );
+end

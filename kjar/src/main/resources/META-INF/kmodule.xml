@@ -3,12 +3,6 @@
          xmlns="http://jboss.org/kie/6.0.0/kmodule">
 
     <kbase name="cluedoKBase" packages="rules" eventProcessingMode="stream">
-        <ruleTemplate
-                template="rules/game_state.drt"
-                dtable="game_state.xlsx"
-                row="2"
-                col="1"/>
-
         <ksession name="cluedoKSession" type="stateful" clockType="pseudo"/>
     </kbase>
 </kmodule>
