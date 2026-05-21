@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <title>Cluedo — Kompletan deduktivni + strateški sistem</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+        h1 { margin-bottom: 4px; }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .nav {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .nav a {
+            font-size: 13px;
+            color: #2c5282;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+        .nav a:hover { background: #f0f4fa; }
+        .nav a.active {
+            background: #2c5282;
+            color: white;
+        }
+        h2 {
+            margin-top: 40px;
+            margin-bottom: 8px;
+            font-size: 22px;
+            border-bottom: 2px solid #1a1a1a;
+            padding-bottom: 6px;
+        }
+        h3 {
+            margin-top: 24px;
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: #444;
+        }
+        .section-meta {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        @media (max-width: 800px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .card-empty {
+            color: #aaa;
+            font-style: italic;
+            padding: 10px 16px;
+            font-size: 13px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 6px;
+        }
+        .badge-state-early   { background: #e5f1ff; color: #2c5282; }
+        .badge-state-mid     { background: #fff3cd; color: #856404; }
+        .badge-state-late    { background: #ffe5e5; color: #8a3030; }
+        .badge-state-solved  { background: #d4edda; color: #155724; }
+        .badge-profile-bluff   { background: #ffe5e5; color: #8a3030; }
+        .badge-profile-defens  { background: #e5f1ff; color: #2c5282; }
+        .badge-profile-aggr    { background: #fff3cd; color: #856404; }
+        .badge-risk-high { background: #ffe5e5; color: #8a3030; }
+        .badge-risk-mid  { background: #fff3cd; color: #856404; }
+        .badge-risk-low  { background: #d4edda; color: #155724; }
+
+        /* Tabela mogućnosti */
+        .category-title {
+            margin-top: 20px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 7px 9px;
+            text-align: center;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        td.card-name {
+            text-align: left;
+            font-weight: 500;
+        }
+        td.score {
+            font-variant-numeric: tabular-nums;
+            color: #666;
+            font-size: 12px;
+        }
+        .cell-O { background: #d4edda; color: #155724; font-weight: bold; }
+        .cell-X { background: #f8d7da; color: #721c24; }
+        .cell-Q { background: #fff3cd; color: #856404; }
+        .cell-S { background: #cce5ff; color: #004085; font-weight: bold; font-size: 16px; }
+
+        /* Rangiranje */
+        .ranking-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+        .rank-pos {
+            display: inline-block;
+            background: #1a1a1a;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .rank-name { flex: 1; }
+        .rank-cat {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 0.5px;
+            min-width: 70px;
+        }
+        .score-bar {
+            flex: 1;
+            min-width: 100px;
+            height: 6px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .score-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f6c945 0%, #e07b00 100%);
+        }
+        .score-num {
+            min-width: 22px;
+            font-variant-numeric: tabular-nums;
+            font-size: 12px;
+            color: #555;
+        }
+
+        /* Tok partije */
+        .turn-row {
+            padding: 10px 14px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        .turn-num {
+            display: inline-block;
+            background: #1a1a1a;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 22px;
+            font-size: 11px;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin: 0 3px;
+        }
+        .tag-suspect { background: #ffe5e5; color: #8a3030; }
+        .tag-weapon  { background: #e5f1ff; color: #2c5282; }
+        .tag-room    { background: #e5ffe5; color: #2f6b2f; }
+        .tag-result  { background: #f5f5f5; color: #555; }
+        .hint-row {
+            padding: 8px 12px;
+            background: #fff9e6;
+            border-left: 3px solid #f0c040;
+            margin-bottom: 5px;
+            font-size: 12px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 12px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box {
+            display: inline-block;
+            width: 24px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .panel-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Cluedo — Kompletan sistem</h1>
+<div class="subtitle">Sistem 1 (deduktivni) + Sistem 2 (strateški), sve nivoe.</div>
+
+<div id="content">Učitavanje…</div>
+
+<script>
+    async function load() {
+        const res = await fetch('/api/full');
+        const data = await res.json();
+
+        const c = document.getElementById('content');
+        c.innerHTML = '';
+
+        c.appendChild(renderStrategicHero(data.strategicOutput));
+        c.appendChild(renderRanking(data.table));
+        c.appendChild(renderTables(data.table));
+        c.appendChild(renderTurns(data.table));
+        c.appendChild(renderHints(data.table));
+        c.appendChild(renderStrategicDetails(data.strategicOutput));
+        c.appendChild(renderKnowledgeSnapshot(data.knowledgeSnapshot));
+    }
+
+    /* =============== Strateški: glavni "hero" panel sa preporukom =============== */
+    function renderStrategicHero(s) {
+        const wrap = document.createElement('div');
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Strateška preporuka (Sistem 2)';
+        wrap.appendChild(h2);
+
+        const meta = document.createElement('div');
+        meta.className = 'section-meta';
+        meta.textContent = 'Trenutni status partije, preporučena akcija i upozorenja.';
+        wrap.appendChild(meta);
+
+        const grid = document.createElement('div');
+        grid.className = 'grid-2';
+
+        // Levo: stanje + preporuke
+        const left = document.createElement('div');
+        left.innerHTML = '<div class="panel-title">Stanje igre</div>';
+        for (const gs of (s.gameStates || [])) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            const phase = extractPhase(gs);
+            div.innerHTML = `<span class="badge ${phaseClass(phase)}">${phase}</span> ${gs}`;
+            left.appendChild(div);
+        }
+        if (!(s.gameStates || []).length) {
+            left.innerHTML += '<div class="card-empty">Nema podataka.</div>';
+        }
+
+        const recTitle = document.createElement('div');
+        recTitle.className = 'panel-title';
+        recTitle.style.marginTop = '14px';
+        recTitle.textContent = 'Preporuka';
+        left.appendChild(recTitle);
+        for (const r of (s.recommendations || [])) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.textContent = r;
+            left.appendChild(div);
+        }
+        for (const a of (s.optimalActions || [])) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<strong>Optimalna akcija:</strong> ${a}`;
+            left.appendChild(div);
+        }
+
+        // Desno: upozorenja + sugestija
+        const right = document.createElement('div');
+        right.innerHTML = '<div class="panel-title">Upozorenja</div>';
+        for (const w of (s.riskWarnings || [])) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            const level = extractRiskLevel(w);
+            div.innerHTML = `<span class="badge ${riskClass(level)}">${level}</span> ${w}`;
+            right.appendChild(div);
+        }
+        if (!(s.riskWarnings || []).length) {
+            right.innerHTML += '<div class="card-empty">Nema upozorenja.</div>';
+        }
+
+        const sugTitle = document.createElement('div');
+        sugTitle.className = 'panel-title';
+        sugTitle.style.marginTop = '14px';
+        sugTitle.textContent = 'Predložena trojka za sugestiju';
+        right.appendChild(sugTitle);
+        if ((s.suggestCards || []).length) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card';
+            cardDiv.innerHTML = s.suggestCards.map(sc => {
+                const m = sc.match(/SuggestCard\[(\w+) -> (\w+)\]/);
+                if (m) {
+                    const tagClass = m[1] === 'SUSPECT' ? 'tag-suspect' :
+                        m[1] === 'WEAPON' ? 'tag-weapon' : 'tag-room';
+                    return `<span class="tag ${tagClass}">${m[2]}</span>`;
+                }
+                return sc;
+            }).join(' ');
+            right.appendChild(cardDiv);
+        } else {
+            right.innerHTML += '<div class="card-empty">Nema predloga.</div>';
+        }
+
+        grid.appendChild(left);
+        grid.appendChild(right);
+        wrap.appendChild(grid);
+        return wrap;
+    }
+
+    /* =============== Rangiranje kandidata =============== */
+    function renderRanking(table) {
+        const wrap = document.createElement('div');
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Rangiranje kandidata po Score(X)';
+        wrap.appendChild(h2);
+
+        const meta = document.createElement('div');
+        meta.className = 'section-meta';
+        meta.textContent = 'Karte sa Score > 0 su potencijalni sadržaj koverte.';
+        wrap.appendChild(meta);
+
+        let maxScore = 1;
+        const all = [];
+        for (const g of table.groups) {
+            for (const r of g.rows) {
+                if (r.score > 0) all.push({...r, category: g.category});
+                if (r.score > maxScore) maxScore = r.score;
+            }
+        }
+        all.sort((a,b) => b.score - a.score);
+
+        if (!all.length) {
+            const empty = document.createElement('div');
+            empty.className = 'card-empty';
+            empty.textContent = 'Sve karte su eliminisane (Score = 0).';
+            wrap.appendChild(empty);
+            return wrap;
+        }
+
+        all.slice(0, 10).forEach((card, idx) => {
+            const div = document.createElement('div');
+            div.className = 'ranking-row';
+            const pct = (card.score / maxScore) * 100;
+            div.innerHTML =
+                `<span class="rank-pos">${idx + 1}</span>` +
+                `<span class="rank-name">${card.cardName}</span>` +
+                `<span class="rank-cat">${categoryLabel(card.category)}</span>` +
+                `<span class="score-bar"><span class="score-bar-fill" style="width:${pct}%"></span></span>` +
+                `<span class="score-num">${card.score}</span>`;
+            wrap.appendChild(div);
+        });
+        return wrap;
+    }
+
+    /* =============== Tabele mogućnosti =============== */
+    function renderTables(table) {
+        const wrap = document.createElement('div');
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Tabela mogućnosti';
+        wrap.appendChild(h2);
+
+        const meta = document.createElement('div');
+        meta.className = 'section-meta';
+        meta.textContent = `${table.players.length} igrača · ${table.groups.reduce((a,g) => a+g.rows.length, 0)} karata`;
+        wrap.appendChild(meta);
+
+        for (const group of table.groups) {
+            const t = document.createElement('div');
+            t.className = 'category-title';
+            t.textContent = categoryLabel(group.category);
+            wrap.appendChild(t);
+
+            const tbl = document.createElement('table');
+            tbl.innerHTML =
+                '<thead><tr><th style="text-align:left">Karta</th><th>Score</th>' +
+                table.players.map(p => `<th>${p}</th>`).join('') +
+                '</tr></thead>';
+            const tbody = document.createElement('tbody');
+            for (const row of group.rows) {
+                const tr = document.createElement('tr');
+                const cells = row.cells.map(c => {
+                    const cls = c === 'O' ? 'cell-O' :
+                        c === 'X' ? 'cell-X' :
+                            c === '✓' ? 'cell-S' : 'cell-Q';
+                    return `<td class="${cls}">${c}</td>`;
+                }).join('');
+                tr.innerHTML =
+                    `<td class="card-name">${row.cardName}</td>` +
+                    `<td class="score">${row.score}</td>` + cells;
+                tbody.appendChild(tr);
+            }
+            tbl.appendChild(tbody);
+            wrap.appendChild(tbl);
+        }
+
+        const legend = document.createElement('div');
+        legend.className = 'legend';
+        legend.innerHTML =
+            '<div class="legend-item"><span class="legend-box cell-O">O</span> sigurno poseduje</div>' +
+            '<div class="legend-item"><span class="legend-box cell-X">X</span> sigurno ne poseduje</div>' +
+            '<div class="legend-item"><span class="legend-box cell-Q">?</span> moguće</div>' +
+            '<div class="legend-item"><span class="legend-box cell-S">✓</span> u koverti</div>';
+        wrap.appendChild(legend);
+        return wrap;
+    }
+
+    /* =============== Tok partije =============== */
+    function renderTurns(table) {
+        const wrap = document.createElement('div');
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Tok partije';
+        wrap.appendChild(h2);
+
+        for (const t of (table.turns || [])) {
+            const div = document.createElement('div');
+            div.className = 'turn-row';
+            let result;
+            if (t.revealedCard) {
+                result = `<strong>${t.shower}</strong> pokazao <span class="tag tag-result">${t.revealedCard}</span> meni`;
+            } else if (t.isPrivate) {
+                result = `<strong>${t.shower}</strong> pokazao kartu igraču <strong>${t.shownTo}</strong> (ne vidim koju)`;
+            } else {
+                result = 'niko nije pokazao';
+            }
+            const noShows = (t.noShowPlayers || []).length > 0
+                ? ` &nbsp;·&nbsp; preskočili: ${t.noShowPlayers.join(', ')}`
+                : '';
+            div.innerHTML =
+                `<span class="turn-num">${t.number}</span>` +
+                `<strong>${t.suggester}</strong> sugeriše: ` +
+                `<span class="tag tag-suspect">${t.suspect}</span>` +
+                `<span class="tag tag-weapon">${t.weapon}</span>` +
+                `<span class="tag tag-room">${t.room}</span>` +
+                `<br><span style="margin-left:30px;color:#666">→ ${result}${noShows}</span>`;
+            wrap.appendChild(div);
+        }
+        return wrap;
+    }
+
+    /* =============== Slabe činjenice =============== */
+    function renderHints(table) {
+        const wrap = document.createElement('div');
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Slabe činjenice (disjunkcije)';
+        wrap.appendChild(h2);
+
+        const meta = document.createElement('div');
+        meta.className = 'section-meta';
+        meta.textContent = 'Iz PrivateShow opservacija: znamo da igrač ima bar jednu od navedenih karata.';
+        wrap.appendChild(meta);
+
+        if (!(table.hints || []).length) {
+            const empty = document.createElement('div');
+            empty.className = 'card-empty';
+            empty.textContent = 'Nema slabih činjenica.';
+            wrap.appendChild(empty);
+            return wrap;
+        }
+
+        for (const h of table.hints) {
+            const div = document.createElement('div');
+            div.className = 'hint-row';
+            div.innerHTML =
+                `(potez ${h.turnNumber}) <strong>${h.player}</strong> ima bar jednu od: ` +
+                h.candidateCards.map(c => `<span class="tag tag-result">${c}</span>`).join('');
+            wrap.appendChild(div);
+        }
+        return wrap;
+    }
+
+    /* =============== Strateški: detalji (profili, fokusi, znanje) =============== */
+    function renderStrategicDetails(s) {
+        const wrap = document.createElement('div');
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Strateški detalji';
+        wrap.appendChild(h2);
+
+        const grid = document.createElement('div');
+        grid.className = 'grid-2';
+
+        // Profili protivnika
+        const profCol = document.createElement('div');
+        profCol.innerHTML = '<h3>Profili protivnika</h3>';
+        if ((s.profiles || []).length) {
+            for (const p of s.profiles) {
+                const div = document.createElement('div');
+                div.className = 'card';
+                const m = p.match(/PlayerProfile\((\w+) -> (\w+)\)/);
+                if (m) {
+                    div.innerHTML = `<strong>${m[1]}</strong> <span class="badge ${profileClass(m[2])}">${m[2]}</span>`;
+                } else {
+                    div.textContent = p;
+                }
+                profCol.appendChild(div);
+            }
+        } else {
+            profCol.innerHTML += '<div class="card-empty">Nema profila.</div>';
+        }
+
+        // Fokus prostorija
+        profCol.innerHTML += '<h3>Fokus prostorija</h3>';
+        if ((s.roomFocuses || []).length) {
+            for (const rf of s.roomFocuses) {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.textContent = rf;
+                profCol.appendChild(div);
+            }
+        } else {
+            const e = document.createElement('div');
+            e.className = 'card-empty';
+            e.textContent = 'Nije detektovan fokus.';
+            profCol.appendChild(e);
+        }
+
+        // Šta protivnici znaju
+        const knowsCol = document.createElement('div');
+        knowsCol.innerHTML = '<h3>Šta protivnici znaju</h3>';
+        knowsCol.innerHTML += '<div class="section-meta">Karte koje su drugi igrači videli tokom partije.</div>';
+        if ((s.knowsCards || []).length) {
+            // Grupisanje po igraču
+            const byPlayer = {};
+            for (const k of s.knowsCards) {
+                const m = k.match(/KnowsCard\[(\w+) zna za (\w+)\]/);
+                if (m) {
+                    if (!byPlayer[m[1]]) byPlayer[m[1]] = [];
+                    byPlayer[m[1]].push(m[2]);
+                }
+            }
+            for (const [player, cards] of Object.entries(byPlayer)) {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `<strong>${player}</strong>: ` +
+                    cards.map(c => `<span class="tag tag-result">${c}</span>`).join('');
+                knowsCol.appendChild(div);
+            }
+        } else {
+            knowsCol.innerHTML += '<div class="card-empty">Nema podataka.</div>';
+        }
+
+        grid.appendChild(profCol);
+        grid.appendChild(knowsCol);
+        wrap.appendChild(grid);
+
+        // Visoke sumnje
+        if ((s.highSuspicions || []).length) {
+            const h3 = document.createElement('h3');
+            h3.textContent = 'Visoke sumnje';
+            wrap.appendChild(h3);
+            for (const hs of s.highSuspicions) {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.textContent = hs;
+                wrap.appendChild(div);
+            }
+        }
+
+        // ShowRecommendation
+        if ((s.showRecommendations || []).length) {
+            const h3 = document.createElement('h3');
+            h3.textContent = 'Preporuka pokazivanja karata';
+            wrap.appendChild(h3);
+            for (const sr of s.showRecommendations) {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.textContent = sr;
+                wrap.appendChild(div);
+            }
+        }
+
+        return wrap;
+    }
+
+    /* =============== Knowledge Snapshot (Sistem 1) =============== */
+    function renderKnowledgeSnapshot(ks) {
+        const wrap = document.createElement('div');
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Knowledge Snapshot (Sistem 1)';
+        wrap.appendChild(h2);
+
+        const meta = document.createElement('div');
+        meta.className = 'section-meta';
+        meta.textContent = 'Sirovi izlaz deduktivnog sistema - ulaz za strateški sistem.';
+        wrap.appendChild(meta);
+
+        const grid = document.createElement('div');
+        grid.className = 'grid-2';
+
+        // Owns
+        const ownsCol = document.createElement('div');
+        ownsCol.innerHTML = `<h3>Sigurni vlasnici (Owns) <span style="color:#888;font-weight:normal">[${ks.owns.length}]</span></h3>`;
+        for (const o of ks.owns) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.style.fontSize = '12px';
+            div.textContent = o;
+            ownsCol.appendChild(div);
+        }
+        if (!ks.owns.length) ownsCol.innerHTML += '<div class="card-empty">Nema.</div>';
+
+        // Solution + GameResult
+        const solCol = document.createElement('div');
+        solCol.innerHTML = `<h3>Rešenje (Solution) <span style="color:#888;font-weight:normal">[${ks.solutions.length}]</span></h3>`;
+        for (const s of ks.solutions) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.style.fontSize = '12px';
+            div.innerHTML = `<span class="badge badge-state-solved">✓</span> ${s}`;
+            solCol.appendChild(div);
+        }
+        if (!ks.solutions.length) {
+            solCol.innerHTML += '<div class="card-empty">Rešenje nije još utvrđeno.</div>';
+        }
+
+        if ((ks.gameResult || []).length) {
+            solCol.innerHTML += '<h3>GameResult (Backward verifikacija)</h3>';
+            for (const gr of ks.gameResult) {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.style.fontSize = '12px';
+                div.textContent = gr;
+                solCol.appendChild(div);
+            }
+        }
+
+        grid.appendChild(ownsCol);
+        grid.appendChild(solCol);
+        wrap.appendChild(grid);
+
+        // NotOwns (collapsed)
+        const details = document.createElement('details');
+        details.style.marginTop = '20px';
+        details.innerHTML = `<summary style="cursor:pointer;font-weight:600;font-size:14px">
+        Eliminacije (NotOwns) <span style="color:#888;font-weight:normal">[${ks.notOwns.length}]</span></summary>`;
+        const grid2 = document.createElement('div');
+        grid2.style.marginTop = '10px';
+        grid2.style.fontSize = '12px';
+        grid2.style.color = '#666';
+        grid2.style.columnCount = '3';
+        for (const no of ks.notOwns) {
+            const div = document.createElement('div');
+            div.textContent = no;
+            grid2.appendChild(div);
+        }
+        details.appendChild(grid2);
+        wrap.appendChild(details);
+
+        return wrap;
+    }
+
+    /* =============== Pomoćne =============== */
+    function categoryLabel(cat) {
+        if (cat === 'SUSPECT') return 'Osumnjičeni';
+        if (cat === 'WEAPON') return 'Oružje';
+        if (cat === 'ROOM') return 'Prostorije';
+        return cat;
+    }
+    function extractPhase(gs) {
+        const m = gs.match(/GameState\((\w+)\)/);
+        return m ? m[1] : gs;
+    }
+    function phaseClass(p) {
+        if (p.includes('EARLY')) return 'badge-state-early';
+        if (p.includes('MID') || p.includes('MIDDLE')) return 'badge-state-mid';
+        if (p.includes('LATE')) return 'badge-state-late';
+        if (p.includes('SOLVED')) return 'badge-state-solved';
+        return 'badge-state-mid';
+    }
+    function extractRiskLevel(w) {
+        const m = w.match(/RiskWarning\[(\w+)/);
+        return m ? m[1] : 'UNKNOWN';
+    }
+    function riskClass(level) {
+        if (level === 'HIGH') return 'badge-risk-high';
+        if (level === 'MID' || level === 'MEDIUM') return 'badge-risk-mid';
+        return 'badge-risk-low';
+    }
+    function profileClass(p) {
+        if (p === 'BLUFFING') return 'badge-profile-bluff';
+        if (p === 'DEFENSIVE' || p === 'DEFENSIVAN') return 'badge-profile-defens';
+        if (p === 'AGGRESSIVE' || p === 'AGRESIVAN') return 'badge-profile-aggr';
+        return 'badge-profile-defens';
+    }
+
+    load().catch(err => {
+        document.getElementById('content').innerHTML =
+            '<div style="color:red">Greška: ' + err.message + '</div>';
+    });
+</script>
+
+</body>
+</html>

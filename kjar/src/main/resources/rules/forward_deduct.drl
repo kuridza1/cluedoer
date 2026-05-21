@@ -1,0 +1,127 @@
+package rules;
+
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.CardType;
+import com.ftn.sbnz.model.CardScore;
+import com.ftn.sbnz.model.Owns;
+import com.ftn.sbnz.model.NotOwns;
+import com.ftn.sbnz.model.Player;
+import com.ftn.sbnz.model.Reveal;
+import com.ftn.sbnz.model.NoShow;
+import com.ftn.sbnz.model.Solution;
+import com.ftn.sbnz.model.Suggestion;
+import com.ftn.sbnz.model.PrivateShow;
+
+declare Suggestion
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
+
+declare Reveal
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
+
+declare NoShow
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
+
+declare PrivateShow
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
+
+rule "5.1.1 - Sopstvena karta: Score = 0"
+    when
+        $o: Owns($player: player, $card: card)
+        Player(this == $player, self == true)
+        $s: CardScore(card == $card, score != 0)
+    then
+        modify($s) { setScore(0) };
+end
+
+rule "5.1.2a - Karta u igri: Score = 0"
+    when
+        Owns($card: card)
+        $s: CardScore(card == $card, score != 0)
+    then
+        modify($s) { setScore(0) };
+end
+
+rule "5.1.2b - Reveal -> Owns"
+    when
+        $r: Reveal($p: revealer, $c: card)
+        not Owns(player == $p, card == $c)
+    then
+        insert(new Owns($p, $c));
+end
+
+rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
+    when
+        Owns($owner: player, $card: card)
+        $other: Player(this != $owner)
+        not NotOwns(player == $other, card == $card)
+    then
+        insert(new NotOwns($other, $card));
+end
+
+
+rule "5.1.2e Sopstvena karta kategorije ->  NotOwns nijednu drugu kartu te kategorije"
+    when
+        Player(self == true, $self: this)
+
+        Owns(player == $self, $ownedCard: card)
+
+        $otherCard: Card(this != $ownedCard)
+
+        not Owns(player == $self, card == $otherCard)
+        not NotOwns(player == $self, card == $otherCard)
+    then
+        insert(new NotOwns($self, $otherCard));
+end
+
+rule "5.1.2f Protivnik Owns = handSize -> NotOwns ostale karte"
+    when
+        $p: Player(self == false, $hs: handSize)
+
+        Number(intValue >= $hs) from accumulate(
+            Owns(player == $p),
+            count(1)
+        )
+
+        $card: Card()
+
+        not Owns(player == $p, card == $card)
+        not NotOwns(player == $p, card == $card)
+    then
+        insert(new NotOwns($p, $card));
+end
+rule "5.1.3a - Karta koju niko ne poseduje je u koverti"
+    when
+        $card: Card($cName: name)
+        // Za svakog igrača postoji NotOwns za ovu kartu
+        not (
+            Player($p: this)
+            and not NotOwns(player == $p, card == $card)
+        )
+        // Još nije zaključeno da je u koverti
+        not Solution(card == $card)
+    then
+        insert(new Solution($card));
+        System.out.println("[5.1.3] " + $cName + " je u koverti (svi igrači imaju NotOwns)");
+end
+
+rule "5.1.3b - Karta u koverti -> Score = 100"
+    when
+        $sol: Solution($card: card)
+        $cs: CardScore(card == $card, score < 100)
+    then
+        modify($cs) { setScore(100) };
+        System.out.println("[5.1.3b] " + $card.getName() + " Score = 100 (potvrđeno rešenje)");
+end
+

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <title>Cluedo CEP - Tabela mogućnosti</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #1a1a1a;
+        }
+        h1 { margin-bottom: 4px; }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .meta {
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 30px;
+        }
+        .nav {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .nav a {
+            color: #2c5282;
+            text-decoration: none;
+            margin-right: 16px;
+        }
+        .nav a:hover { text-decoration: underline; }
+        .nav a.active {
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        .category-title {
+            margin-top: 30px;
+            margin-bottom: 8px;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+        td.card-name {
+            text-align: left;
+            font-weight: 500;
+            min-width: 140px;
+        }
+        td.score-cell {
+            min-width: 120px;
+            text-align: left;
+            padding: 0 12px;
+        }
+        .score-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .score-bar {
+            flex: 1;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .score-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f6c945 0%, #e07b00 100%);
+            border-radius: 4px;
+        }
+        .score-num {
+            min-width: 22px;
+            font-variant-numeric: tabular-nums;
+            font-size: 13px;
+            color: #555;
+        }
+        .score-zero {
+            color: #ccc;
+            font-style: italic;
+        }
+        .cell-O { background: #d4edda; color: #155724; font-weight: bold; }
+        .cell-X { background: #f8d7da; color: #721c24; }
+        .cell-Q { background: #fff3cd; color: #856404; }
+        .cell-S { background: #cce5ff; color: #004085; font-weight: bold; font-size: 18px; }
+        .legend {
+            margin-top: 40px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 13px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-box {
+            display: inline-block;
+            width: 28px;
+            height: 22px;
+            line-height: 22px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .ranking {
+            margin-top: 40px;
+        }
+        .ranking h2 {
+            margin-bottom: 8px;
+        }
+        .ranking-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .rank-pos {
+            display: inline-block;
+            background: #1a1a1a;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 22px;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .rank-name { flex: 1; }
+        .rank-cat {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 0.5px;
+            min-width: 80px;
+        }
+        .rank-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 200px;
+        }
+        .turns, .hints {
+            margin-top: 40px;
+        }
+        .turn-row {
+            padding: 12px 16px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .turn-num {
+            display: inline-block;
+            background: #1a1a1a;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 12px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 0 4px;
+        }
+        .tag-suspect { background: #ffe5e5; color: #8a3030; }
+        .tag-weapon  { background: #e5f1ff; color: #2c5282; }
+        .tag-room    { background: #e5ffe5; color: #2f6b2f; }
+        .tag-result  { background: #f5f5f5; color: #555; }
+        .hint-row {
+            padding: 10px 14px;
+            background: #fff9e6;
+            border-left: 3px solid #f0c040;
+            margin-bottom: 6px;
+            font-size: 13px;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Cluedo — CEP analiza (Nivo 2)</h1>
+<div class="subtitle">Heurističko skorovanje hipoteza nad event tokom</div>
+<div class="nav">
+    <a href="/index.html">← Forward chaining (Nivo 1)</a>
+    <a href="/cep.html" class="active">CEP (Nivo 2)</a>
+</div>
+<div class="meta" id="meta">Učitavanje…</div>
+
+<div class="ranking">
+    <h2>Rangiranje kandidata po Score(X)</h2>
+    <div class="subtitle">Karte sa najvišom akumuliranom sumnjom (potencijalni sadržaj koverte)</div>
+    <div id="rankingList"></div>
+</div>
+
+<div id="tables"></div>
+<div class="turns">
+    <h2>Tok partije</h2>
+    <div id="turnsList"></div>
+</div>
+
+<div class="hints">
+    <h2>Slabe činjenice (disjunkcije)</h2>
+    <div class="subtitle">Ko ima bar jednu od navedenih karata — još ne znamo koju.</div>
+    <div id="hintsList"></div>
+</div>
+<div class="legend">
+    <div class="legend-item"><span class="legend-box cell-O">O</span> sigurno poseduje</div>
+    <div class="legend-item"><span class="legend-box cell-X">X</span> sigurno ne poseduje</div>
+    <div class="legend-item"><span class="legend-box cell-Q">?</span> moguće</div>
+    <div class="legend-item"><span class="legend-box cell-S">✓</span> u koverti</div>
+</div>
+
+<script>
+    async function load() {
+        const res = await fetch('/api/cep/table');
+        const data = await res.json();
+
+        const totalCards = data.groups.reduce((a, g) => a + g.rows.length, 0);
+        document.getElementById('meta').textContent =
+            `${data.players.length} igrača, ${totalCards} karata`;
+
+        // Maksimalni Score (za normalizaciju bar širine)
+        let maxScore = 1;
+        for (const g of data.groups) {
+            for (const r of g.rows) {
+                if (r.score > maxScore) maxScore = r.score;
+            }
+        }
+
+        // Top 10 kandidata po Score-u (samo Score > 0)
+        const allCards = [];
+        for (const g of data.groups) {
+            for (const r of g.rows) {
+                if (r.score > 0) {
+                    allCards.push({...r, category: g.category});
+                }
+            }
+        }
+        allCards.sort((a, b) => b.score - a.score);
+        const top10 = allCards.slice(0, 10);
+
+        const rankEl = document.getElementById('rankingList');
+        rankEl.innerHTML = '';
+        top10.forEach((card, idx) => {
+            const div = document.createElement('div');
+            div.className = 'ranking-row';
+            const pct = (card.score / maxScore) * 100;
+            div.innerHTML =
+                `<span class="rank-pos">${idx + 1}</span>` +
+                `<span class="rank-name">${card.cardName}</span>` +
+                `<span class="rank-cat">${categoryLabel(card.category)}</span>` +
+                `<span class="rank-bar-wrap">` +
+                `<span class="score-bar"><span class="score-bar-fill" style="width:${pct}%"></span></span>` +
+                `<span class="score-num">${card.score}</span>` +
+                `</span>`;
+            rankEl.appendChild(div);
+        });
+
+        // Tabele po kategorijama
+        const container = document.getElementById('tables');
+        container.innerHTML = '';
+        for (const group of data.groups) {
+            const title = document.createElement('div');
+            title.className = 'category-title';
+            title.textContent = categoryLabel(group.category);
+            container.appendChild(title);
+
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const trHead = document.createElement('tr');
+            trHead.innerHTML = '<th style="text-align:left">Karta</th><th style="text-align:left">Score</th>' +
+                data.players.map(p => `<th>${p}</th>`).join('');
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            for (const row of group.rows) {
+                const tr = document.createElement('tr');
+                const cells = row.cells.map(c => {
+                    const cls = c === 'O' ? 'cell-O'
+                        : c === 'X' ? 'cell-X'
+                            : c === '✓' ? 'cell-S'
+                                : 'cell-Q';
+                    return `<td class="${cls}">${c}</td>`;
+                }).join('');
+
+                let scoreHtml;
+                if (row.score === 0) {
+                    scoreHtml = `<td class="score-cell score-zero">eliminisana</td>`;
+                } else {
+                    const pct = (row.score / maxScore) * 100;
+                    scoreHtml =
+                        `<td class="score-cell">` +
+                        `<div class="score-bar-wrap">` +
+                        `<span class="score-num">${row.score}</span>` +
+                        `<span class="score-bar"><span class="score-bar-fill" style="width:${pct}%"></span></span>` +
+                        `</div>` +
+                        `</td>`;
+                }
+
+                tr.innerHTML =
+                    `<td class="card-name">${row.cardName}</td>` +
+                    scoreHtml +
+                    cells;
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+    }
+
+    function categoryLabel(cat) {
+        if (cat === 'SUSPECT') return 'Osumnjičeni';
+        if (cat === 'WEAPON') return 'Oružje';
+        if (cat === 'ROOM') return 'Prostorije';
+        return cat;
+    }
+
+    load().catch(err => {
+        document.getElementById('meta').textContent = 'Greška: ' + err.message;
+        // Tok partije
+        const turnsEl = document.getElementById('turnsList');
+        turnsEl.innerHTML = '';
+        for (const t of (data.turns || [])) {
+            const div = document.createElement('div');
+            div.className = 'turn-row';
+            let result;
+            if (t.revealedCard) {
+                result = `<strong>${t.shower}</strong> pokazao <span class="tag tag-result">${t.revealedCard}</span> meni`;
+            } else if (t.isPrivate) {
+                result = `<strong>${t.shower}</strong> pokazao neku kartu igraču <strong>${t.shownTo}</strong> (ne vidim koju)`;
+            } else {
+                result = `niko nije pokazao`;
+            }
+            const noShows = (t.noShowPlayers || []).length > 0
+                ? ` &nbsp;·&nbsp; preskočili: ${t.noShowPlayers.join(', ')}`
+                : '';
+            div.innerHTML =
+                `<span class="turn-num">${t.number}</span>` +
+                `<strong>${t.suggester}</strong> sugeriše: ` +
+                `<span class="tag tag-suspect">${t.suspect}</span>` +
+                `<span class="tag tag-weapon">${t.weapon}</span>` +
+                `<span class="tag tag-room">${t.room}</span>` +
+                `<br><span style="margin-left:34px;color:#666">→ ${result}${noShows}</span>`;
+            turnsEl.appendChild(div);
+        }
+
+        // Disjunkcije
+        const hintsEl = document.getElementById('hintsList');
+        hintsEl.innerHTML = '';
+        if ((data.hints || []).length === 0) {
+            hintsEl.innerHTML = '<div class="subtitle">Nema slabih činjenica.</div>';
+        } else {
+            for (const h of data.hints) {
+                const div = document.createElement('div');
+                div.className = 'hint-row';
+                div.innerHTML =
+                    `(potez ${h.turnNumber}) <strong>${h.player}</strong> ima bar jednu od: ` +
+                    h.candidateCards.map(c => `<span class="tag tag-result">${c}</span>`).join('');
+                hintsEl.appendChild(div);
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

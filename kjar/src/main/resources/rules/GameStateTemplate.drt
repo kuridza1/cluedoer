@@ -1,0 +1,41 @@
+template header
+minRatio
+maxRatio
+status
+
+package rules
+
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.CardScore;
+import com.ftn.sbnz.model.GameState;
+import com.ftn.sbnz.model.GameStatus;
+
+template "game_state"
+
+rule "6.1 - @{status}"
+salience 10
+when
+    // 1. Aggregate total cards and eliminated cards from working memory
+    $total: Number() from accumulate(Card($c: this), count($c))
+    $elim:  Number() from accumulate(CardScore(score == 0), count(1))
+
+    // 2. Safely evaluate the ratio against your Excel limits
+    eval(
+        ((double) $elim.intValue() / $total.intValue()) >= Double.parseDouble("@{minRatio}") &&
+        ((double) $elim.intValue() / $total.intValue()) < Double.parseDouble("@{maxRatio}")
+    )
+
+    // 3. Prevent infinite loops by checking if this state is already set
+    not GameState(status == GameStatus.@{status})
+then
+    // 4. Retract old game states before inserting the new one
+    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof GameState)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+
+    // 5. Insert the new state dictated by your spreadsheet row
+    insert(new GameState(GameStatus.@{status}));
+    System.out.println("[6.1] GAME STATE -> @{status}");
+end
+
+end template

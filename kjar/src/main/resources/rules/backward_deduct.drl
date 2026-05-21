@@ -1,0 +1,58 @@
+package rules;
+
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.CardType;
+import com.ftn.sbnz.model.Owns;
+import com.ftn.sbnz.model.NotOwns;
+import com.ftn.sbnz.model.Player;
+import com.ftn.sbnz.model.Solution;
+
+// bazni query
+query "isInEnvelope"(Card $c)
+    Card(this == $c)
+    not (
+        Player($p: this)
+        and not NotOwns(player == $p, card == $c)
+    )
+end
+
+query "eliminatedFromEnvelope"(Card $c)
+    Owns(card == $c)
+end
+
+// rekurzija kad je samo jedna karta ostala u kategoriji
+query "isOnlyCandidateInCategory"(Card $c)
+    Card(this == $c, $type: type)
+    not (
+        Card(this != $c, type == $type, $other: this)
+        and not eliminatedFromEnvelope($other;)
+    )
+end
+
+// kompletno resenje
+query "solutionKnown"(Card $suspect, Card $weapon, Card $room)
+    Card(this == $suspect, type == CardType.SUSPECT)
+    Card(this == $weapon, type == CardType.WEAPON)
+    Card(this == $room, type == CardType.ROOM)
+    isInEnvelope($suspect;)
+    isInEnvelope($weapon;)
+    isInEnvelope($room;)
+end
+
+query "possibleOwners"(Card $c, Player $p)
+    Player(this == $p)
+    Card(this == $c)
+    not NotOwns(player == $p, card == $c)
+end
+
+// Forward pravilo koje koristi backward query iznutra
+// (chain: forward -> backward query -> forward inserts)
+rule "BC - Karta u koverti po kategorijskoj eliminaciji"
+    when
+        $c: Card($name: name)
+        isOnlyCandidateInCategory($c;)
+        not Solution(card == $c)
+    then
+        insert(new Solution($c));
+        System.out.println("[BC] " + $name + " u koverti (jedini kandidat u kategoriji)");
+end
