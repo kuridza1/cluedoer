@@ -1,0 +1,70 @@
+@startuml TemplateCluodoer
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 60
+
+skinparam class {
+    BackgroundColor<<core>>       #E6F1FB
+    BorderColor<<core>>           #185FA5
+    BackgroundColor<<fact>>       #E1F5EE
+    BorderColor<<fact>>           #0F6E56
+    BackgroundColor<<strategy>>   #EEEDFE
+    BorderColor<<strategy>>       #534AB7
+    BackgroundColor<<subgoal>>    #FAEEDA
+    BorderColor<<subgoal>>        #854F0B
+    BackgroundColor<<service>>    #FAECE7
+    BorderColor<<service>>        #993C1D
+    BackgroundColor<<config>>     #F1EFE8
+    BorderColor<<config>>         #5F5E5A
+    BackgroundColor<<enum>>       #FBEAF0
+    BorderColor<<enum>>           #993556
+}
+
+
+
+    class DroolsConfig <<config>> {
+        + kieContainer(): KieContainer
+    }
+
+    class TemplateLoader <<config>> {
+        + generateNoShowRules(): String
+        + generatePrivateShowRules(): String
+        + generateGameStateRules(): String
+        + generateSuggestCardRules(): String
+    }
+
+    class NoShowRow <<config>> {
+        - ruleName: String
+        - getter: String
+    }
+
+    class PrivateShowRow <<config>> {
+        - candidateName: String
+        - notOwnsCard1: String
+        - notOwnsCard2: String
+        - candidateCard: String
+    }
+
+    class GameStateRow <<config>> {
+        - minRatio: String
+        - maxRatio: String
+        - status: String
+    }
+
+    class SuggestCardRow <<config>> {
+        - category: String
+        - accumulateOwns: String
+        - ruleOwns: String
+    }
+
+
+DroolsConfig ..> TemplateLoader : <<koristi>>
+TemplateLoader ..> NoShowRow
+TemplateLoader ..> PrivateShowRow
+TemplateLoader ..> GameStateRow
+TemplateLoader ..> SuggestCardRow
+
+@enduml

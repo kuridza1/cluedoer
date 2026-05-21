@@ -1,0 +1,326 @@
+@startuml Cluedoer
+
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 60
+
+skinparam class {
+    BackgroundColor<<core>>       #E6F1FB
+    BorderColor<<core>>           #185FA5
+    BackgroundColor<<fact>>       #E1F5EE
+    BorderColor<<fact>>           #0F6E56
+    BackgroundColor<<strategy>>   #EEEDFE
+    BorderColor<<strategy>>       #534AB7
+    BackgroundColor<<subgoal>>    #FAEEDA
+    BorderColor<<subgoal>>        #854F0B
+    BackgroundColor<<service>>    #FAECE7
+    BorderColor<<service>>        #993C1D
+    BackgroundColor<<config>>     #F1EFE8
+    BorderColor<<config>>         #5F5E5A
+    BackgroundColor<<enum>>       #FBEAF0
+    BorderColor<<enum>>           #993556
+}
+
+
+package "model (domen)" <<Rectangle>> {
+
+    class Card <<core>> {
+        - type: CardType
+        - name: String
+        + equals(o): boolean
+        + hashCode(): int
+    }
+
+    class Player <<core>> {
+        - name: String
+        - handSize: int
+        - self: boolean
+    }
+
+    class Suggestion <<core>> {
+        - suggester: Player
+        - suspect: Card
+        - weapon: Card
+        - room: Card
+        - turnNumber: int
+        - timestamp: long
+        + getCardByCategory(c): Card
+    }
+
+    enum CardType <<enum>> {
+        SUSPECT
+        WEAPON
+        ROOM
+    }
+
+    enum GameStatus <<enum>> {
+        EARLY_GAME
+        MID_GAME
+        LATE_GAME
+        SOLVED
+    }
+
+    enum ProfileType <<enum>> {
+        DEFENSIVE
+        BLUFFING
+        AGGRESSIVE
+        NEUTRAL
+    }
+
+    enum RiskLevel <<enum>> {
+        LOW
+        MEDIUM
+        HIGH
+    }
+}
+
+
+package "model (cinjenice)" <<Rectangle>> {
+
+    class Owns <<fact>> {
+        - player: Player
+        - card: Card
+    }
+
+    class NotOwns <<fact>> {
+        - player: Player
+        - card: Card
+    }
+
+    class Solution <<fact>> {
+        - card: Card
+    }
+
+    class CardScore <<fact>> {
+        - card: Card
+        - score: int
+    }
+
+    class PrivateShow <<fact>> {
+        - shower: Player
+        - recipient: Player
+        - suggestion: Suggestion
+        - timestamp: long
+    }
+
+    class NoShow <<fact>> {
+        - player: Player
+        - suggestion: Suggestion
+        - timestamp: long
+    }
+
+    class Reveal <<fact>> {
+        - revealer: Player
+        - card: Card
+        - timestamp: long
+    }
+
+    class KnowsCard <<fact>> {
+        - player: Player
+        - card: Card
+        - timestamp: Date
+    }
+
+    class KnowsCategory <<fact>> {
+        - player: Player
+        - category: CardType
+        - timestamp: Date
+    }
+
+    class HighSuspicion <<fact>> {
+        - player: Player
+        - card: Card
+        - timestamp: Date
+    }
+
+    class OpponentKnowsCard <<fact>> {
+        - card: Card
+        - value: boolean
+    }
+
+    class ScoreApplied <<fact>> {
+        - ruleId: String
+        - key: String
+    }
+}
+
+
+package "model (strategija)" <<Rectangle>> {
+
+    class GameState <<strategy>> {
+        - status: GameStatus
+    }
+
+    class Profile <<strategy>> {
+        - player: Player
+        - profile: ProfileType
+    }
+
+    class ProfileProcessed <<strategy>> {
+        - player: Player
+    }
+
+    class StrategyContext <<strategy>> {
+        - status: GameStatus
+        - bestSuspect: Card
+        - bestWeapon: Card
+        - bestRoom: Card
+    }
+
+    class SuggestCard <<strategy>> {
+        - category: CardType
+        - card: Card
+    }
+
+    class ShowRecommendation <<strategy>> {
+        - card: Card
+        - suggestion: Suggestion
+        - reason: String
+    }
+
+    class StrategicRecommendation <<strategy>> {
+        - phase: GameStatus
+        - message: String
+    }
+
+    class SuggestionRecommendation <<strategy>> {
+        - suspect: Card
+        - weapon: Card
+        - room: Card
+        - reason: String
+    }
+
+    class OptimalAction <<strategy>> {
+        - action: String
+        - card: Card
+        - category: CardType
+        - suspect: Card
+        - weapon: Card
+        - room: Card
+        - reasoning: String
+    }
+
+    class Action <<strategy>> {
+        - type: String
+        - suspect: Card
+        - weapon: Card
+        - room: Card
+        - reason: String
+    }
+
+    class RiskWarning <<strategy>> {
+        - level: RiskLevel
+        - cause: Player
+        - message: String
+    }
+
+    class GameResult <<strategy>> {
+        - suspect: Card
+        - weapon: Card
+        - room: Card
+        - solved: boolean
+    }
+
+    class PriorityCard <<strategy>> {
+        - card: Card
+    }
+
+    class RoomFocus <<strategy>> {
+        - player: Player
+        - room: Card
+    }
+
+    class SolutionProbability <<strategy>> {
+        - card: Card
+        - probability: double
+    }
+}
+
+
+
+
+Card "1" --> "1" CardType : type
+GameState "1" --> "1" GameStatus : status
+Profile "1" --> "1" ProfileType : profile
+RiskWarning "1" --> "1" RiskLevel : level
+
+Suggestion "0..*" o--> "1" Player : suggester
+Suggestion "0..*" o--> "3" Card : "suspect/weapon/room"
+
+
+Owns --> Player
+Owns --> Card
+
+NotOwns --> Player
+NotOwns --> Card
+
+Solution --> Card
+CardScore --> Card
+
+PrivateShow --> Player
+PrivateShow --> Suggestion
+
+NoShow --> Player
+NoShow --> Suggestion
+
+Reveal --> Player
+Reveal --> Card
+
+KnowsCard --> Player
+KnowsCard --> Card
+
+KnowsCategory --> Player
+KnowsCategory --> CardType
+
+HighSuspicion --> Player
+HighSuspicion --> Card
+
+OpponentKnowsCard --> Card
+
+
+Profile --> Player
+ProfileProcessed --> Player
+
+StrategyContext --> GameStatus
+StrategyContext "1" --> "3" Card : "best S/W/R"
+
+SuggestCard --> CardType
+SuggestCard --> Card
+
+ShowRecommendation --> Card
+ShowRecommendation --> Suggestion
+
+StrategicRecommendation --> GameStatus
+
+SuggestionRecommendation "1" --> "3" Card
+
+OptimalAction --> Card
+OptimalAction --> CardType
+
+Action "1" --> "3" Card
+
+RiskWarning --> Player
+
+GameResult "1" --> "3" Card
+
+PriorityCard --> Card
+RoomFocus --> Player
+RoomFocus --> Card
+SolutionProbability --> Card
+
+
+
+legend right
+  |= Boja |= Sloj |
+  |<#E6F1FB>   | Domensko jezgro |
+  |<#E1F5EE>   | Cinjenice (fact tipovi) |
+  |<#EEEDFE>   | Strategija i preporuke |
+  |<#F1EFE8>   | Drools konfiguracija |
+  |<#FBEAF0>   | Enumeracije |
+endlegend
+
+@enduml
