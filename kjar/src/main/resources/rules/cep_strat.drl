@@ -24,21 +24,17 @@ import com.ftn.sbnz.model.HighSuspicion;
 import com.ftn.sbnz.model.KnowsCard;
 import com.ftn.sbnz.model.ScoreApplied;
 import com.ftn.sbnz.model.ProfileProcessed;
+
 // ============================================================================
 // 6.3 - CEP ANALIZA PONAŠANJA (STRATEŠKI SISTEM - NIVO 3)
-//
-// NAPOMENA O ISPRAVKAMA (verzija 2):
-// - Sva pravila koja menjaju CardScore koriste 'modify' umesto 'retract+insert'.
-// - Sva pravila imaju ScoreApplied marker da se ne aktiviraju više puta
-//   za istu kombinaciju (pravilo + karta + igrač). Ovo sprečava da iste
-//   činjenice (npr. KnowsCard za istu kartu) iznova okidaju Score modifikaciju.
-// - Marker pattern je usaglašen sa onim iz cep_deduct.drl (5.2.3a/b/c/4).
 // ============================================================================
-
 
 // ============================================================================
 // 6.3.1 - Detekcija visoke sumnje kada igrač koristi istu kartu u više uzastopnih sugestija
 // ============================================================================
+
+// Ako protivnik koristi istu kartu u tri uzastopne sugestije, to znaci da je
+// ili fokusiran na nju (veruje da je resenje) ili je pokusava da je eliminiše
 rule "6.3.1 - VISOKA SUMNJA - ISTA KARTA U VISE UZASTOPNIH SUGESTIJA"
 when
     $p: Player(self == false)
@@ -62,6 +58,9 @@ end
 // ============================================================================
 // 6.3.2 - Detekcija blefiranja kada igrač više puta koristi kartu koju sigurno poseduje
 // ============================================================================
+
+// Ako protivnik u svojim sugestijama bar 2 puta navede kartu za koju znamo
+// da je poseduje, verovatno blefira – pokusava da zbuni ostale igrace
 rule "6.3.2 - BLEFIRANJE - VISE PUTA KORISTI SOPSTVENU KARTU"
 when
     $p: Player(self == false)
@@ -87,6 +86,9 @@ end
 // ============================================================================
 // 6.3.3 - Detekcija agresivnog profila u kasnoj igri
 // ============================================================================
+
+// U kasnoj igri, ako protivnik naglo promeni obrazac sugestija (razlicite karte
+// u uzastopnim potezima), verovatno je postao agresivan i sprema se za optuzbu
 rule "6.3.3 - AGRESIVAN PROFIL - NAGLA PROMENA OBRASCA U KASNOJ IGRI"
 when
     GameState(status == GameStatus.LATE_GAME)
@@ -110,12 +112,15 @@ end
 // ============================================================================
 // 6.3.4 - Zaključak da protivnik zna za kartu
 // ============================================================================
+
+// Ako je protivnik koristio kartu bar 2 puta, a zatim potpuno prestao da je
+// koristi, verovatno je saznao da je ta karta kod nekog drugog ili u koverti
 rule "6.3.4 - VEROVATNO ZNA ZA KARTU - PRESTAO DA KORISTI"
 when
     $p: Player(self == false)
     $c: Card()
 
-    // Igrač je koristio kartu u NAJMANJE 2 sugestije (ne samo 1!)
+    // Igrač je koristio kartu u NAJMANJE 2 sugestije
     $count: Number(intValue >= 2) from accumulate(
         Suggestion(suggester == $p,
                    suspect == $c || weapon == $c || room == $c),
@@ -142,6 +147,9 @@ end
 // ============================================================================
 // 6.3.5 - Detekcija fokusa na prostoriju
 // ============================================================================
+
+// Ako protivnik bar 2 puta koristi istu prostoriju u sugestijama, verovatno
+// je fokusiran na nju – ona mu je ili meta ili veruje da je u koverti
 rule "6.3.5 - FOKUS NA PROSTORIJU - ISTA PROSTORIJA"
 when
     $p: Player(self == false)
@@ -159,14 +167,11 @@ end
 
 
 // ============================================================================
-// CEP PRAVILA ZA KORISCENJE INFORMACIJA - SA salience ZA REDOSLED
+// CEP PRAVILA ZA KORISCENJE INFORMACIJA
 // ============================================================================
 
-// ============================================================================
-// PRVO: Korekcija score-a za fokusirane prostorije (salience 20)
-// FIX: 'modify' umesto 'retract+insert'. Marker po (RoomFocus, prostorija) -
-//      svaki RoomFocus se računa jednom, čak i ako više igrača ima fokus.
-// ============================================================================
+// Ako je protivnik fokusiran na neku prostoriju, povecavamo njen score –
+// veca je verovatnoca da je ona resenje ili da je protivnik cilja
 rule "KORIGUJ SCORE ZA FOKUS"
 salience 20
 when
@@ -180,11 +185,7 @@ then
             + " (fokus " + $p.getName() + ")");
 end
 
-
-// ============================================================================
-// DRUGO: Prioritet visoke sumnje (salience 15)
-// FIX: marker da se ne pravi duplikat SuggestCard za isti par (HighSuspicion, karta).
-// ============================================================================
+// Karte pod visokom sumnjom dobijaju prioritet za sugestiju – treba ih testirati
 rule "PRIORITIZUJ VISOKU SUMNJU"
 salience 15
 when
@@ -197,11 +198,8 @@ then
     System.out.println("CEP PRIORITET: " + $c.getName() + " (visoka sumnja)");
 end
 
-
-// ============================================================================
-// TRECE: Izbegavanje karata koje protivnik zna u kasnoj igri (salience 15)
-// FIX: marker da ne uđemo u petlju kad PRIORITIZUJ ponovo doda istu SuggestCard.
-// ============================================================================
+// U kasnoj igri izbegavamo karte za koje znamo da ih protivnik zna –
+// njihovo testiranje nam ne daje novu informaciju
 rule "IZBEGAVAJ KARTU - KASNA IGRA"
 salience 15
 when
@@ -215,11 +213,7 @@ then
     System.out.println("CEP IZBEGAVAM: " + $c.getName() + " jer protivnik zna za nju");
 end
 
-
-// ============================================================================
-// CETVRTO: Povećaj score za karte koje su pod visokom sumnjom (salience 10)
-// FIX: 'modify' + marker. Bonus se primenjuje jednom po (sumnjičar, karta).
-// ============================================================================
+// Karte pod visokom sumnjom dobijaju mali bonus na score – treba ih testirati
 rule "POVECAJ SCORE ZA VISOKU SUMNJU"
 salience 10
 when
@@ -233,38 +227,7 @@ then
             + $p.getName() + ")");
 end
 
-
-// ============================================================================
-// PETO: Smanji score za karte koje protivnik zna (salience 10)
-//
-// GLAVNA ISPRAVKA: ovo je pravilo koje je ranije ulazilo u beskonačnu petlju
-// (retract + insert je svaki put pravio novi CardScore objekat, koji je
-// ponovo trigerovao pravilo, sve dok score nije pao na 0).
-//
-// FIX: 'modify' + marker po (KnowsCard, karta). Penalizacija se primenjuje
-// jednom po protivniku koji "zna", bez obzira na to koliko puta okidači
-// budu reaktivirani.
-// ============================================================================
-//rule "SMAANJI SCORE ZA POZNATE KARTE"
-//salience 10
-//when
-//    $kc: KnowsCard($p: player, $c: card)
-//    $cs: CardScore(card == $c, score > 0)
-//    not ScoreApplied(ruleId == "PENALTY_KNOWN", key == ($p.getName() + ":" + $c.getName()))
-//then
-//    modify($cs) { setScore($cs.getScore() - 1) };
-//    insert(new ScoreApplied("PENALTY_KNOWN", $p.getName() + ":" + $c.getName()));
-//    System.out.println("CEP: -1 score za " + $c.getName() + " (protivnik "
-//            + $p.getName() + " zna)");
-//end
-
-
-// ============================================================================
-// SESTO: CEP utice na stratešku preporuku (salience 5)
-// FIX: marker po HighSuspicion karti, da ne re-pišemo preporuku za istu kartu.
-//      Ako više karata ima HighSuspicion, preporuka se piše više puta -
-//      ali poslednja "pobeđuje" jer prepisuje prethodnu (retract).
-// ============================================================================
+// CEP analiza moze da izmeni stratesku preporuku ako postoji visoka sumnja
 rule "CEP UTICE NA STRATESKU PREPORUKU"
 salience 5
 when
@@ -283,11 +246,7 @@ then
     System.out.println("CEP: Izmenjena strateška preporuka za " + $c.getName());
 end
 
-
-// ============================================================================
-// SEDMO: Agresivan protivnik - povecaj oprez (salience 5)
-// FIX: marker po protivniku.
-// ============================================================================
+// Agresivan protivnik u kasnoj igri zahteva povecan oprez
 rule "AGRESIVAN PROTIVNIK - POVECAN OPREZ"
 salience 5
 when
@@ -303,42 +262,21 @@ then
     System.out.println("CEP OPREZ: Agresivan protivnik " + $p.getName());
 end
 
-
-// ============================================================================
-// REMOVE OLD PROFILE WHEN NEW ONE IS ADDED
-// NAPOMENA: ovo pravilo je opasno - 'this != $newProfile' samo veže dva
-// različita Profile objekta, ali ne kaže koja je stara koja je nova.
-// U najgorem slučaju retract-uje pogrešnog (možda novog koji je upravo dodat).
-//
-// FIX: koristimo timestamp marker - novi profile ima ScoreApplied marker
-// koji ga štiti od retract-a. Bez markera = stari profile = bezbedno retract.
-//
-// ALTERNATIVA (preporučena): obrisati ovo pravilo i dozvoliti da igrač
-// može imati više profila istovremeno (BLUFFING + AGGRESSIVE). Ipak,
-// to su različita ponašanja koja se mogu javiti zajedno.
-// ============================================================================
+// Kada se doda novi profil, uklanjamo stari – svaki igrac moze imati samo jedan
 rule "REMOVE OLD PROFILE WHEN NEW IS ADDED"
 when
     $p: Player()
-
     $newProfile: Profile(player == $p)
-
-    $oldProfile: Profile(player == $p)
-
+    $oldProfile: Profile(player == $p, this != $newProfile)
     not ProfileProcessed(player == $p)
 then
     retract($oldProfile);
-
     insert(new ProfileProcessed($p));
-
     System.out.println("REMOVED OLD PROFILE for " + $p.getName());
 end
 
-// ============================================================================
-// 6.3.1a - EARLY/MID GAME SPAM = karta je verovatno bezbedna za protivnika
-// Smanjujemo score jer je manja sansa da je resenje.
-// ============================================================================
-
+// U ranoj ili srednjoj igri, ako protivnik cesto koristi istu kartu (visoka sumnja),
+// to znaci da verovatno nije resenje – smanjujemo joj score
 rule "6.3.1a - EARLY MID SPAM PENALTY"
 salience 12
 when
@@ -372,12 +310,8 @@ then
     );
 end
 
-
-// ============================================================================
-// 6.3.1b - LATE GAME SPAM = karta postaje veoma sumnjiva
-// U kasnoj igri igraci forsiraju karte koje misle da su resenje.
-// ============================================================================
-
+// U kasnoj igri, ako protivnik cesto koristi istu kartu (visoka sumnja),
+// to znaci da verovatno misli da je resenje – povecavamo joj score
 rule "6.3.1b - LATE GAME SPAM BONUS"
 salience 13
 when
