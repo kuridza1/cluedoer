@@ -1,18 +1,22 @@
 package com.ftn.sbnz.model;
 
-/**
- * Pretpostavka koju je neki igrač izneo u toku partije: (S, W, R) trojka.
- * Iz proposala: "Istorija pretpostavki – ko je postavio pretpostavku i koje tri karte".
- */
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class Suggestion {
 
     private Player suggester;
     private Card suspect;
     private Card weapon;
     private Card room;
+    private int turnNumber;
+    private long timestamp;
 
     public Suggestion() {
     }
+
 
     public Suggestion(Player suggester, Card suspect, Card weapon, Card room) {
         this.suggester = suggester;
@@ -21,17 +25,25 @@ public class Suggestion {
         this.room = room;
     }
 
-    public Player getSuggester() { return suggester; }
-    public void setSuggester(Player suggester) { this.suggester = suggester; }
+    public Suggestion(int turnNumber, Player suggester, Card suspect, Card weapon, Card room) {
+        this(suggester, suspect, weapon, room);
+        this.turnNumber = turnNumber;
+    }
 
-    public Card getSuspect() { return suspect; }
-    public void setSuspect(Card suspect) { this.suspect = suspect; }
+    public Suggestion(int turnNumber, long timestamp, Player suggester,
+                      Card suspect, Card weapon, Card room) {
+        this(turnNumber, suggester, suspect, weapon, room);
+        this.timestamp = timestamp;
+    }
 
-    public Card getWeapon() { return weapon; }
-    public void setWeapon(Card weapon) { this.weapon = weapon; }
-
-    public Card getRoom() { return room; }
-    public void setRoom(Card room) { this.room = room; }
+    public Card getCardByCategory(String category) {
+        switch (category) {
+            case "suspect": return suspect;
+            case "weapon": return weapon;
+            case "room": return room;
+            default: return null;
+        }
+    }
 
     @Override
     public String toString() {

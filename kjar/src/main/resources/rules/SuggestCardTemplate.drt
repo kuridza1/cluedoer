@@ -1,0 +1,55 @@
+template header
+category
+accumulateOwns
+ruleOwns
+
+package rules
+
+import com.ftn.sbnz.model.*
+
+template "suggest_card"
+
+rule "6.2.1 - SUGGEST @{category}"
+salience 40
+no-loop true
+when
+
+    $max: Number() from accumulate(
+        CardScore($s: score, score > 0, $c: card)
+        and Card(this == $c, type == CardType.@{category})
+        @{accumulateOwns}
+        ,
+        max($s)
+    )
+
+    CardScore($card: card, score == $max)
+
+    Card(this == $card, type == CardType.@{category})
+
+    @{ruleOwns}
+
+    not CardScore($c2: card, score == $max,
+        eval(
+            $c2 != $card &&
+            $c2.getType() == CardType.@{category} &&
+            $c2.getName().compareTo($card.getName()) < 0
+        )
+    )
+
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof SuggestCard &&
+                   ((SuggestCard) obj).getCategory() == CardType.@{category})) {
+
+        kcontext.getKieRuntime()
+                .delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+
+    insert(new SuggestCard(CardType.@{category}, $card));
+
+    System.out.println(
+        "[6.2.1] SUGGEST @{category} -> " + $card.getName()
+    );
+end
+
+end template

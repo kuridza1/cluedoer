@@ -10,21 +10,31 @@ import com.ftn.sbnz.model.Reveal;
 import com.ftn.sbnz.model.NoShow;
 import com.ftn.sbnz.model.Solution;
 import com.ftn.sbnz.model.Suggestion;
+import com.ftn.sbnz.model.PrivateShow;
 
-// ============================================================================
-// NIVO 1 - Forward chaining (monotona dedukcija)
-// Iz proposala, sekcija 5.1
-// ============================================================================
-// Pravila ovog nivoa izvode nove činjenice o vlasništvu karata i sadržaju
-// koverte iz već utvrđenih činjenica. Zaključci su monotoni - jednom izvedena
-// činjenica se ne povlači.
-// ============================================================================
+declare Suggestion
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
 
+declare Reveal
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
 
-// ----------------------------------------------------------------------------
-// 5.1.1 Sopstvene karte
-// IF X ∈ Karte(ja) THEN Score(X) = 0 AND Rešenje(K) != X
-// ----------------------------------------------------------------------------
+declare NoShow
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
+
+declare PrivateShow
+    @role(event)
+    @timestamp(timestamp)
+    @expires(2h)
+end
 
 rule "5.1.1 - Sopstvena karta: Score = 0"
     when
@@ -33,37 +43,24 @@ rule "5.1.1 - Sopstvena karta: Score = 0"
         $s: CardScore(card == $card, score != 0)
     then
         modify($s) { setScore(0) };
-        System.out.println("[5.1.1] Sopstvena karta -> Score(" + $card.getName() + ") = 0");
 end
 
-// Generalniji pandan (važi i za karte drugih igrača): jednom kad znamo da
-// karta pripada nekome u igri, ona ne može biti u koverti -> Score = 0.
-rule "5.1.2a - Karta poznatog vlasnika: Score = 0"
+rule "5.1.2a - Karta u igri: Score = 0"
     when
         Owns($card: card)
         $s: CardScore(card == $card, score != 0)
     then
         modify($s) { setScore(0) };
-        System.out.println("[5.1.2a] Karta je u igri -> Score(" + $card.getName() + ") = 0");
 end
 
-
-// ----------------------------------------------------------------------------
-// 5.1.2 Karte protivnika
-// ----------------------------------------------------------------------------
-
-// IF protivnik A pokaže kartu X THEN X ∈ Karte(A) AND Score(X) = 0
 rule "5.1.2b - Reveal -> Owns"
     when
         $r: Reveal($p: revealer, $c: card)
         not Owns(player == $p, card == $c)
     then
         insert(new Owns($p, $c));
-        System.out.println("[5.1.2b] " + $p.getName() + " je pokazao -> Owns(" + $c.getName() + ")");
 end
 
-// IF X ∈ Karte(A) THEN ∀ B != A : X ∉ Karte(B)
-// (Eksluzivnost vlasništva - svaka karta postoji u tačno jednom primerku.)
 rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
     when
         Owns($owner: player, $card: card)
@@ -71,107 +68,60 @@ rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
         not NotOwns(player == $other, card == $card)
     then
         insert(new NotOwns($other, $card));
-        System.out.println("[5.1.2c] " + $card.getName() + " pripada "
-                + $owner.getName() + " -> NotOwns(" + $other.getName() + ", " + $card.getName() + ")");
 end
 
-// IF protivnik A nije pokazao nijednu kartu na pretpostavku (X, Y, Z)
-//    THEN {X, Y, Z} ∩ Karte(A) = ∅
-// Razlažemo u tri NotOwns činjenice (po jedna za S, W, R iz sugestije).
-rule "5.1.2d - NoShow -> NotOwns za suspect"
+
+rule "5.1.2e Sopstvena karta kategorije ->  NotOwns nijednu drugu kartu te kategorije"
     when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getSuspect()
+        Player(self == true, $self: this)
+
+        Owns(player == $self, $ownedCard: card)
+
+        $otherCard: Card(this != $ownedCard)
+
+        not Owns(player == $self, card == $otherCard)
+        not NotOwns(player == $self, card == $otherCard)
+    then
+        insert(new NotOwns($self, $otherCard));
+end
+
+rule "5.1.2f Protivnik Owns = handSize -> NotOwns ostale karte"
+    when
+        $p: Player(self == false, $hs: handSize)
+
+        Number(intValue >= $hs) from accumulate(
+            Owns(player == $p),
+            count(1)
+        )
+
+        $card: Card()
+
+        not Owns(player == $p, card == $card)
         not NotOwns(player == $p, card == $card)
     then
         insert(new NotOwns($p, $card));
-        System.out.println("[5.1.2d] " + $p.getName() + " nije pokazao -> NotOwns("
-                + $p.getName() + ", " + $card.getName() + ")");
 end
-
-rule "5.1.2d - NoShow -> NotOwns za weapon"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getWeapon()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-        System.out.println("[5.1.2d] " + $p.getName() + " nije pokazao -> NotOwns("
-                + $p.getName() + ", " + $card.getName() + ")");
-end
-
-rule "5.1.2d - NoShow -> NotOwns za room"
-    when
-        NoShow($p: player, $sug: suggestion)
-        $card: Card() from $sug.getRoom()
-        not NotOwns(player == $p, card == $card)
-    then
-        insert(new NotOwns($p, $card));
-        System.out.println("[5.1.2d] " + $p.getName() + " nije pokazao -> NotOwns("
-                + $p.getName() + ", " + $card.getName() + ")");
-end
-
-
-// ----------------------------------------------------------------------------
-// 5.1.3 Neotkrivene karte i sadržaj koverte
-// ----------------------------------------------------------------------------
-
-// IF X ∈ K (po kategoriji) AND ∀ igrač A : X ∉ Karte(A) THEN Rešenje(K) = X
-// Implementacija: ako za kartu X nijedan igrač nije njen vlasnik, A SVI igrači
-// imaju NotOwns(X), onda X mora biti u koverti.
-//
-// Koristimo accumulate da prebrojimo igrače i NotOwns činjenice za datu kartu.
 rule "5.1.3a - Karta koju niko ne poseduje je u koverti"
     when
-        $c: Card()
-        not Owns(card == $c)
-        $totalPlayers: Number() from accumulate(
-            Player($p: this),
-            count($p)
+        $card: Card($cName: name)
+        // Za svakog igrača postoji NotOwns za ovu kartu
+        not (
+            Player($p: this)
+            and not NotOwns(player == $p, card == $card)
         )
-        $notOwners: Number(this == $totalPlayers) from accumulate(
-            NotOwns(card == $c, $p: player),
-            count($p)
-        )
-        not Solution(card == $c)
+        // Još nije zaključeno da je u koverti
+        not Solution(card == $card)
     then
-        insert(new Solution($c));
-        System.out.println("[5.1.3a] Niko ne poseduje " + $c.getName() + " -> Solution(" + $c.getName() + ")");
+        insert(new Solution($card));
+        System.out.println("[5.1.3] " + $cName + " je u koverti (svi igrači imaju NotOwns)");
 end
 
-// IF |Kandidati(K)| = 1 AND Kandidati(K) = {X} THEN Rešenje(K) = X
-// Kandidat = karta date kategorije koja još nije eliminisana (Score > 0).
-// Ako za neku kategoriju postoji tačno jedna takva karta, ona je rešenje.
-rule "5.1.3b - Jedini kandidat u kategoriji je u koverti"
+rule "5.1.3b - Karta u koverti -> Score = 100"
     when
-        $t: CardType()
-        $count: Number(intValue == 1) from accumulate(
-            CardScore($card: card, score > 0)
-            and Card(this == $card, type == $t),
-            count($card)
-        )
-        $sc: CardScore($winner: card, score > 0)
-        Card(this == $winner, type == $t)
-        not Solution(card == $winner)
+        $sol: Solution($card: card)
+        $cs: CardScore(card == $card, score < 100)
     then
-        insert(new Solution($winner));
-        System.out.println("[5.1.3b] Jedini kandidat u kategoriji " + $t
-                + " -> Solution(" + $winner.getName() + ")");
+        modify($cs) { setScore(100) };
+        System.out.println("[5.1.3b] " + $card.getName() + " Score = 100 (potvrđeno rešenje)");
 end
 
-
-// ----------------------------------------------------------------------------
-// Pomoćno pravilo - Solution -> NotOwns za sve igrače
-// Karta u koverti ne može biti ni u rukama bilo kog igrača. Ovo pomaže
-// drugim pravilima jer obezbeđuje konzistenciju modela.
-// ----------------------------------------------------------------------------
-rule "Solution -> NotOwns za sve igrače"
-    when
-        Solution($c: card)
-        $p: Player()
-        not NotOwns(player == $p, card == $c)
-    then
-        insert(new NotOwns($p, $c));
-        System.out.println("[Sol->NotOwns] Solution(" + $c.getName()
-                + ") -> NotOwns(" + $p.getName() + ", " + $c.getName() + ")");
-end

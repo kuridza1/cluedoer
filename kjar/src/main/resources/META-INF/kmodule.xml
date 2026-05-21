@@ -2,8 +2,7 @@
 <kmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://jboss.org/kie/6.0.0/kmodule">
 
-    <kbase name="cluedoKBase" packages="rules">
-        <ksession name="cluedoKSession"/>
+    <kbase name="cluedoKBase" packages="rules" eventProcessingMode="stream">
+        <ksession name="cluedoKSession" type="stateful" clockType="pseudo"/>
     </kbase>
-
 </kmodule>

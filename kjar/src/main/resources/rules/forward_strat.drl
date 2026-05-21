@@ -1,0 +1,371 @@
+package rules;
+
+import com.ftn.sbnz.model.*;
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.CardScore;
+import com.ftn.sbnz.model.Owns;
+import com.ftn.sbnz.model.NotOwns;
+import com.ftn.sbnz.model.Player;
+import com.ftn.sbnz.model.Reveal;
+import com.ftn.sbnz.model.Suggestion;
+import com.ftn.sbnz.model.GameState;
+import com.ftn.sbnz.model.GameStatus;
+import com.ftn.sbnz.model.Profile;
+import com.ftn.sbnz.model.ProfileType;
+import com.ftn.sbnz.model.RoomFocus;
+import com.ftn.sbnz.model.PriorityCard;
+import com.ftn.sbnz.model.StrategicRecommendation;
+import com.ftn.sbnz.model.CardType;
+import com.ftn.sbnz.model.RiskWarning;
+import com.ftn.sbnz.model.RiskLevel;
+import com.ftn.sbnz.model.ShowRecommendation;
+import com.ftn.sbnz.model.SuggestCard;
+
+
+// 6.1.1 - PROFILISANJE PROTIVNIKA
+
+// Ako je protivnik pokazao istu kartu bar 2 puta, verovatno je defanzivan
+// i cuva tu kartu kao sigurnu
+rule "6.1.1 - DEFENSIVE"
+when
+    $p: Player(self == false)
+    $c: Card()
+    $count: Number(intValue >= 2) from accumulate(
+        Reveal(revealer == $p, card == $c),
+        count(1)
+    )
+    not Profile(player == $p, profile == ProfileType.DEFENSIVE)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof Profile && ((Profile) obj).getPlayer() == $p)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new Profile($p, ProfileType.DEFENSIVE));
+    System.out.println("[6.1.1] PROFILE DEFENSIVE -> " + $p.getName());
+end
+
+// Ako protivnik u svojoj sugestiji navodi kartu za koju znamo da je poseduje,
+// verovatno blefira – pokusava da navede druge da misle da nema tu kartu
+rule "6.1.1 - BLUFFING"
+when
+    $p: Player(self == false)
+    Owns(player == $p, $c: card)
+    Suggestion(suggester == $p, (suspect == $c || weapon == $c || room == $c))
+    not Profile(player == $p, profile == ProfileType.BLUFFING)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof Profile && ((Profile) obj).getPlayer() == $p)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new Profile($p, ProfileType.BLUFFING));
+    System.out.println("[6.1.1] PROFILE BLUFFING -> " + $p.getName());
+end
+
+// Ako protivnik ima profil BLUFFING, veca je mogucnost da ima kartu koju sugerise
+// i time je manja sansa da je ta karta u koverti – smanjujemo joj score
+rule "6.3.1 - BLUFFING REDUCES TRUST"
+when
+    Profile($p: player, profile == ProfileType.BLUFFING)
+    $s: Suggestion(suggester == $p)
+    $c: CardScore(
+        card == $s.suspect || card == $s.weapon || card == $s.room,
+        score > 0
+    )
+    not ScoreApplied(ruleId == "BLUFF_IMPACT", key == $p.getName() + ":" + $c.getCard().getName())
+then
+    modify($c) {
+        setScore($c.getScore() - 1)
+    };
+    insert(new ScoreApplied("BLUFF_IMPACT", $p.getName() + ":" + $c.getCard().getName()));
+    System.out.println("BLUFF IMPACT: -" + $c.getCard().getName());
+end
+
+// Defanzivni protivnici retko kada sugerisu karte koje nemaju – ako sugerisu,
+// ta karta je verovatno kod nekog drugog, pa povecavamo njen score
+rule "6.3.1 - DEFENSIVE SUGGESTIONS INFORMATIVE"
+when
+    Profile($p: player, profile == ProfileType.DEFENSIVE)
+    $s: Suggestion(suggester == $p)
+    $c: CardScore(
+        card == $s.suspect || card == $s.weapon || card == $s.room,
+        score > 0
+    )
+    not ScoreApplied(ruleId == "DEF_SIGNAL", key == $p.getName() + ":" + $c.getCard().getName())
+then
+    modify($c) {
+        setScore($c.getScore() + 1)
+    };
+    insert(new ScoreApplied("DEF_SIGNAL", $p.getName() + ":" + $c.getCard().getName()));
+    System.out.println("DEFENSIVE SIGNAL +1 " + $c.getCard().getName());
+end
+
+// Agresivni protivnici cesto menjaju sugestije i teze je predvideti njihove karte –
+// njihove sugestije su manje pouzdane za zakljucivanje
+rule "6.3.1 - AGGRESSIVE REDUCES STABILITY"
+when
+    Profile($p: player, profile == ProfileType.AGGRESSIVE)
+    $s: Suggestion(suggester == $p)
+    $c: CardScore(
+        card == $s.suspect || card == $s.weapon || card == $s.room,
+        score > 1
+    )
+    not ScoreApplied(ruleId == "AGG_VOLATILITY", key == $p.getName() + ":" + $c.getCard().getName())
+then
+    modify($c) {
+        setScore($c.getScore() - 1)
+    };
+    insert(new ScoreApplied("AGG_VOLATILITY", $p.getName() + ":" + $c.getCard().getName()));
+end
+
+// Ako je protivnik fokusiran na odredjenu prostoriju (koristi je 3+ puta),
+// ta prostorija je verovatno njegova meta ili je u koverti – povecavamo joj score
+rule "6.3.3 - ROOM FOCUS BOOST"
+when
+    RoomFocus($p: player, $r: room)
+    $cs: CardScore(card == $r, score > 0)
+    not ScoreApplied(ruleId == "ROOM_FOCUS_BOOST", key == $p.getName() + ":" + $r.getName())
+then
+    modify($cs) {
+        setScore($cs.getScore() + 3)
+    };
+    insert(new ScoreApplied("ROOM_FOCUS_BOOST", $p.getName() + ":" + $r.getName()));
+end
+
+// Ako znamo da protivnik sigurno zna za neku kartu (prestao da je koristi),
+// ta karta gotovo sigurno nije u koverti – znacajno smanjujemo score
+rule "6.3.2 - KNOWN CARD PENALTY"
+when
+    KnowsCard($p: player, $c: card)
+    $cs: CardScore(card == $c, score > 0)
+    not ScoreApplied(ruleId == "KNOWN_CARD_PENALTY", key == $p.getName() + ":" + $c.getName())
+then
+    modify($cs) {
+        setScore($cs.getScore() - 3)
+    };
+    insert(new ScoreApplied("KNOWN_CARD_PENALTY", $p.getName() + ":" + $c.getName()));
+end
+
+// Ako postoji visoka sumnja da protivnik ima odredjenu kartu (koristi je u
+// uzastopnim sugestijama), ta karta verovatno nije u koverti – smanjujemo score
+rule "6.3.1 - HIGH SUSPICION PENALTY"
+when
+    HighSuspicion($p: player, $c: card)
+    $cs: CardScore(card == $c, score > 0)
+    not ScoreApplied(ruleId == "HS_PENALTY", key == $p.getName() + ":" + $c.getName())
+then
+    modify($cs) {
+        setScore($cs.getScore() - 2)
+    };
+    insert(new ScoreApplied("HS_PENALTY", $p.getName() + ":" + $c.getName()));
+end
+
+// Ako protivnik koristi istu prostoriju bar 3 puta, beležimo fokus na nju
+// – kasnije koristimo za povecanje score-a te prostorije
+rule "6.1.1 - ROOM FOCUS"
+when
+    $p: Player(self == false)
+    $r: Card(type == CardType.ROOM)
+    $count: Number(intValue >= 3) from accumulate(
+        Suggestion(suggester == $p, room == $r),
+        count(1)
+    )
+    not RoomFocus(player == $p, room == $r)
+then
+    insert(new RoomFocus($p, $r));
+    System.out.println("[6.1.1] ROOM FOCUS -> " + $p.getName() + " fokusira " + $r.getName());
+end
+
+
+// 6.2.1 - PRIORITY CARD
+
+// Pronalazimo kartu sa najvisim score-om – to je nasa najbolja hipoteza za
+// sledecu sugestiju. Kod istog score-a biramo leksikografski manju da izbegnemo petlju
+rule "6.2.1 - GLOBAL MAX SCORE"
+salience 5
+no-loop true
+when
+    $maxScore: Number() from accumulate(
+        CardScore($s: score, score > 0),
+        max($s)
+    )
+    $best: CardScore(
+        $card: card,
+        score == $maxScore
+    )
+    not CardScore(
+        score == $maxScore,
+        card.name < $card.name
+    )
+    not PriorityCard(card == $card)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof PriorityCard)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new PriorityCard($card));
+    System.out.println("[6.2.1] PRIORITY CARD -> " + $card.getName() + " (score=" + $maxScore + ")");
+end
+
+
+// 6.2.1 - STRATEGIJA PO FAZI IGRE
+
+// U ranoj igri fokus je na maksimizaciji informacionog dobitka –
+// sugerisemo kartu sa najvisim score-om
+rule "6.2.1 - EARLY STRATEGY"
+when
+    GameState(status == GameStatus.EARLY_GAME)
+    $pc: PriorityCard($card: card)
+    not StrategicRecommendation(phase == GameStatus.EARLY_GAME)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof StrategicRecommendation)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new StrategicRecommendation(
+        GameStatus.EARLY_GAME,
+        "EARLY GAME: maksimizuj informacioni dobitak. Predlozena karta za sugestiju: " + $card.getName()
+    ));
+    System.out.println("[6.2.1] STRATEGY EARLY -> fokus na " + $card.getName());
+end
+
+// U srednjoj igri kombinujemo poznate i nepoznate karte da suzimo kandidate
+rule "6.2.1 - MID STRATEGY"
+when
+    GameState(status == GameStatus.MID_GAME)
+    $pc: PriorityCard($card: card)
+    not StrategicRecommendation(phase == GameStatus.MID_GAME)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof StrategicRecommendation)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new StrategicRecommendation(
+        GameStatus.MID_GAME,
+        "MID GAME: kombinuj poznatu i nepoznatu kartu u sugestiji. Predlozena karta: " + $card.getName()
+    ));
+    System.out.println("[6.2.1] STRATEGY MID -> fokus na " + $card.getName());
+end
+
+// U kasnoj igri forsiramo eliminaciju – sugestija treba da testira preostale kandidate
+rule "6.2.1 - LATE STRATEGY"
+when
+    GameState(status == GameStatus.LATE_GAME)
+    $pc: PriorityCard($card: card)
+    not StrategicRecommendation(phase == GameStatus.LATE_GAME)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(obj -> obj instanceof StrategicRecommendation)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new StrategicRecommendation(
+        GameStatus.LATE_GAME,
+        "LATE GAME: forsiraj eliminaciju, pripremi finalnu optubu. Predlozena karta: " + $card.getName()
+    ));
+    System.out.println("[6.2.1] STRATEGY LATE -> fokus na " + $card.getName());
+end
+
+
+// 6.2.2 - IZBOR KARTE ZA POKAZIVANJE
+
+// Ako je protivnik vec video kartu od nas, pokazivanje iste karte ne daje
+// novu informaciju – minimalan gubitak, optimalan izbor
+rule "6.2.2 - SHOW ALREADY KNOWN CARD"
+when
+    $sug: Suggestion($suggester: suggester)
+    $p: Player(self == true)
+    Owns(player == $p, $c: card)
+    eval($sug.getSuspect() == $c || $sug.getWeapon() == $c || $sug.getRoom() == $c)
+    Reveal(revealer == $p, card == $c)
+    not ShowRecommendation(card == $c, suggestion == $sug)
+then
+    insert(new ShowRecommendation($c, $sug,
+        "Protivnik " + $suggester.getName() + " vec zna za kartu " + $c.getName() + " - minimalan informacioni gubitak"));
+    System.out.println("[6.2.2] POKAZI (vec znana) -> " + $c.getName() + " sugestoru " + $suggester.getName());
+end
+
+// Prostorije su vrednije od oruzja i osumnjicenih jer se pojavljuju u svakoj sugestiji.
+// Ako mozemo, pokazujemo oruzje ili osumnjicenog, a prostoriju cuvamo za sebe
+rule "6.2.2 - PREFER NON-ROOM"
+when
+    $sug: Suggestion($suggester: suggester)
+    $p: Player(self == true)
+    Owns(player == $p, $c: card)
+    Card(this == $c, type != CardType.ROOM)
+    eval($sug.getSuspect() == $c || $sug.getWeapon() == $c || $sug.getRoom() == $c)
+    not ShowRecommendation(suggestion == $sug)
+then
+    insert(new ShowRecommendation($c, $sug,
+        "Preferiramo ne-prostoriju: " + $c.getName() + " (prostorije cuvamo)"));
+    System.out.println("[6.2.2] POKAZI (ne-prostorija) -> " + $c.getName());
+end
+
+// Defanzivnim protivnicima pokazujemo kartu sa najnizim score-om – ona je najmanje
+// verovatno resenje, pa im ne dajemo korisnu informaciju
+rule "6.2.2 - DEFENSIVE OPPONENT LOWEST SCORE"
+no-loop true
+when
+    $sug: Suggestion($suspect: suspect, $weapon: weapon, $room: room, $suggester: suggester)
+    Profile(player == $suggester, profile == ProfileType.DEFENSIVE)
+    $p: Player(self == true)
+    $minScore: Number() from accumulate(
+        Owns(player == $p, $cx: card)
+        and CardScore(card == $cx, $sx: score)
+        and eval($cx == $suspect || $cx == $weapon || $cx == $room),
+        min($sx)
+    )
+    Owns(player == $p, $c: card)
+    CardScore(card == $c, score == $minScore)
+    eval($c == $suspect || $c == $weapon || $c == $room)
+    not ShowRecommendation(suggestion == $sug)
+then
+    insert(new ShowRecommendation($c, $sug,
+        "Defanzivan protivnik " + $suggester.getName() + " - pokazi kartu sa najnizim score: " + $c.getName()));
+    System.out.println("[6.2.2] POKAZI (defanzivan protivnik, min score) -> " + $c.getName());
+end
+
+
+
+// 6.2.3 - PROCENA RIZIKA
+
+// Ako je kasna igra i neko blefira, rizik je visok – protivnik moze uskoro da optuzi
+rule "6.2.3 - HIGH RISK WARNING"
+salience 10
+when
+    GameState(status == GameStatus.LATE_GAME)
+    Profile($p: player, profile == ProfileType.BLUFFING)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof RiskWarning)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new RiskWarning(RiskLevel.HIGH, $p,
+        "UPOZORENJE: Igrač " + $p.getName() + " blefira u kasnoj igri!"));
+end
+
+// Ako nije kasna igra ali neko blefira, rizik je srednji – treba biti oprezan
+rule "6.2.3 - MEDIUM RISK WARNING"
+salience 5
+when
+    GameState(status != GameStatus.LATE_GAME)
+    Profile($p: player, profile == ProfileType.BLUFFING)
+    not RiskWarning(level == RiskLevel.HIGH)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof RiskWarning)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new RiskWarning(RiskLevel.MEDIUM, $p,
+        "NAPOMENA: Igrač " + $p.getName() + " možda blefira."));
+end
+
+// Ako nema blefiranja, rizik je nizak – mozemo da pratimo standardnu strategiju
+rule "6.2.3 - LOW RISK"
+salience 1
+when
+    not Profile(profile == ProfileType.BLUFFING)
+    not RiskWarning(level == RiskLevel.HIGH)
+    not RiskWarning(level == RiskLevel.MEDIUM)
+then
+    for (Object o : kcontext.getKieRuntime().getObjects(
+            obj -> obj instanceof RiskWarning)) {
+        kcontext.getKieRuntime().delete(kcontext.getKieRuntime().getFactHandle(o));
+    }
+    insert(new RiskWarning(RiskLevel.LOW, null,
+        "Nije detektovan rizik. Nastavi prema strategiji."));
+end

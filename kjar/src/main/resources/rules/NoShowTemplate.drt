@@ -1,0 +1,23 @@
+template header
+ruleName
+getter
+
+package rules;
+
+import com.ftn.sbnz.model.NoShow;
+import com.ftn.sbnz.model.NotOwns;
+import com.ftn.sbnz.model.Player;
+import com.ftn.sbnz.model.NoShow;
+import com.ftn.sbnz.model.Suggestion;
+template "NoShow-NotOwns-template"
+
+rule "5.1.2d - NoShow -> NotOwns za @{ruleName}"
+    when
+        NoShow($p: player, $sug: suggestion)
+        $card: Card() from $sug.@{getter}()
+        not NotOwns(player == $p, card == $card)
+    then
+        insert(new NotOwns($p, $card));
+end
+
+end template

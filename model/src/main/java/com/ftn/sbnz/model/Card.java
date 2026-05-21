@@ -2,10 +2,7 @@ package com.ftn.sbnz.model;
 
 import java.util.Objects;
 
-/**
- * Reprezentuje jednu Cluedo kartu (osumnjičeni, oružje ili prostorija).
- * Identifikuje se kombinacijom (type, name).
- */
+
 public class Card {
 
     private CardType type;
