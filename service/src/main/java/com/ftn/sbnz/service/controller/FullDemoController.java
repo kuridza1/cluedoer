@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  *   Sistem 1 (deduktivni): forward (5.1) + CEP (5.2) + backward (5.3)
  *   Sistem 2 (strateški):  forward (6.1-6.2) + CEP (6.3)
  *
- * Backward chaining: 4 query-ja iz backward.drl pozvana eksplicitno
+ * Backward chaining: 4 query-ja iz backward_deduct.drl pozvana eksplicitno
  * iz Jave preko getQueryResults(). Drools query-ji se NE pokreću
  * automatski sa fireAllRules() — to je suština backward chaining-a:
  * goal-driven rezonovanje na zahtev.
@@ -269,14 +269,9 @@ public class FullDemoController {
         clock.advanceTime(1, TimeUnit.MINUTES);
         firedPerPhase.add(ks.fireAllRules());
 
-        // ====================================================================
-        // 4. BACKWARD CHAINING — eksplicitan poziv query-ja
-        // ====================================================================
+
         Map<String, Object> backwardResults = runBackwardChaining(ks);
 
-        // ====================================================================
-        // 5. Snapshot rezultata
-        // ====================================================================
         Map<String, Object> result = new HashMap<>();
 
         Map<String, Object> snapshot = new HashMap<>();
@@ -330,25 +325,10 @@ public class FullDemoController {
         return result;
     }
 
-    // ========================================================================
-    // BACKWARD CHAINING
-    // ========================================================================
-    /**
-     * Poziva sve backward query-je iz backward.drl:
-     *   1. "solutionKnown"           - kompletno rešenje (suspect, weapon, room)
-     *   2. "isInEnvelope"            - provera za pojedinačnu kartu
-     *   3. "isOnlyCandidateInCategory" - REKURZIVNI query (kompozicija)
-     *   4. "possibleOwners"          - ko sve može imati kartu
-     *
-     * Drools query-ji se NE pokreću sa fireAllRules() — moramo ih
-     * pozvati ručno preko getQueryResults(). To je suština backward
-     * chaining-a: goal-driven, na zahtev.
-     */
     private Map<String, Object> runBackwardChaining(KieSession ks) {
         Map<String, Object> bc = new LinkedHashMap<>();
         bc.put("solutionFound", false);
 
-        // ----- 1. solutionKnown: kompletno rešenje -----
         try {
             QueryResults results = ks.getQueryResults(
                     "solutionKnown",
@@ -439,9 +419,7 @@ public class FullDemoController {
         return bc;
     }
 
-    // ========================================================================
-    // PossibilityTable builder (nepromenjen)
-    // ========================================================================
+
     private PossibilityTable buildTable(KieSession ks) {
         List<Card> allCardsList = ks.getObjects(o -> o instanceof Card).stream()
                 .map(o -> (Card) o).collect(Collectors.toList());

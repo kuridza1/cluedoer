@@ -14,18 +14,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-/**
- * Stateful Cluedo controller — drži jednu KieSession u memoriji.
- *
- * Flow:
- *   1. POST /api/game/start      - inicijalizuj karte, igrače, moje karte
- *   2. POST /api/game/suggestion - unesi potez (sugestija + odgovori)
- *   3. GET  /api/game/state      - snapshot stanja (tabela + strateški + backward)
- *   4. POST /api/game/reset      - obriši sesiju
- *
- * Napomena: ovaj kontroler radi sa jednom globalnom igrom — nije
- * multi-user. Za potrebe demonstracije projekta to je sasvim dovoljno.
- */
 @RestController
 @RequestMapping("/api/game")
 @CrossOrigin(origins = "*")
@@ -37,7 +25,6 @@ public class GameController {
     private SessionPseudoClock clock;
     private int turnCounter = 0;
 
-    // Lookup mape za brže pronalaženje fact-ova po imenu
     private final Map<String, Card> cardsByName = new LinkedHashMap<>();
     private final Map<String, Player> playersByName = new LinkedHashMap<>();
 
@@ -45,9 +32,7 @@ public class GameController {
         this.kieContainer = kieContainer;
     }
 
-    // ========================================================================
-    // DTO klase za ulaz
-    // ========================================================================
+
     public static class StartRequest {
         public List<String> suspects;
         public List<String> weapons;
@@ -69,13 +54,11 @@ public class GameController {
         public String weapon;
         public String room;
         public List<String> noShowPlayers;
-        public String shower;       // ako je private show ili reveal
-        public String revealedCard; // null ako je private (ja nisam ni predlagac ni pokazivac)
+        public String shower;
+        public String revealedCard;
     }
 
-    // ========================================================================
-    // ENDPOINTS
-    // ========================================================================
+
     @PostMapping("/start")
     public Map<String, Object> start(@RequestBody StartRequest req) {
         if (ks != null) {
@@ -88,7 +71,6 @@ public class GameController {
         ks = kieContainer.newKieSession("cluedoKSession");
         clock = ks.getSessionClock();
 
-        // Karte
         for (String s : req.suspects) {
             Card c = new Card(CardType.SUSPECT, s);
             cardsByName.put(s, c);
@@ -108,7 +90,6 @@ public class GameController {
             ks.insert(new CardScore(c, 1));
         }
 
-        // Igrači
         Player me = null;
         for (PlayerInput pi : req.players) {
             Player p = new Player(pi.name, pi.handSize, pi.self);
@@ -117,7 +98,6 @@ public class GameController {
             if (pi.self) me = p;
         }
 
-        // Moje karte
         if (me != null) {
             for (String cardName : req.myCards) {
                 Card c = cardsByName.get(cardName);
@@ -154,7 +134,6 @@ public class GameController {
         Suggestion sug = new Suggestion(turnCounter, t, suggester, suspect, weapon, room);
         ks.insert(sug);
 
-        // NoShow — zastita: shower nikad ne sme biti i u NoShow listi
         if (req.noShowPlayers != null) {
             for (String pname : req.noShowPlayers) {
                 if (pname.equals(req.shower)) {
@@ -171,13 +150,11 @@ public class GameController {
             Player shower = playersByName.get(req.shower);
             if (shower != null) {
                 if (req.revealedCard != null) {
-                    // Bilo ja predlagač, bilo ja pokazivač - znam tačno koja karta
                     Card revealed = cardsByName.get(req.revealedCard);
                     if (revealed != null) {
                         ks.insert(new Reveal(shower, revealed, t));
                     }
                 } else {
-                    // Niti predlažem niti pokazujem - vidim samo da je nešto pokazano
                     ks.insert(new PrivateShow(shower, suggester, sug, t));
                 }
             }
@@ -209,13 +186,10 @@ public class GameController {
         return Map.of("status", "reset");
     }
 
-    // ========================================================================
-    // SNAPSHOT (kombinuje knowledge + strategic + tabelu + backward chaining)
-    // ========================================================================
     private Map<String, Object> snapshot() {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        // Knowledge snapshot (Sistem 1)
+        // deduct system
         Map<String, Object> knowledge = new LinkedHashMap<>();
         knowledge.put("scores", ks.getObjects(o -> o instanceof CardScore).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList()));
@@ -230,7 +204,7 @@ public class GameController {
         knowledge.put("backwardChaining", runBackwardChaining());
         result.put("knowledgeSnapshot", knowledge);
 
-        // Strateški snapshot (Sistem 2)
+        // strategic system
         Map<String, Object> strategic = new LinkedHashMap<>();
         strategic.put("gameStates", ks.getObjects(o -> o instanceof GameState).stream()
                 .map(Object::toString).collect(Collectors.toList()));
@@ -254,10 +228,10 @@ public class GameController {
                 .map(Object::toString).collect(Collectors.toList()));
         result.put("strategicOutput", strategic);
 
-        // Tabela mogućnosti
+        // possibility table
         result.put("table", buildTable());
 
-        // Meta za UI (lista karata i igrača za dropdown-ove)
+        // ui
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("players", playersByName.keySet());
         Map<String, List<String>> cards = new LinkedHashMap<>();
@@ -277,9 +251,7 @@ public class GameController {
         return result;
     }
 
-    // ========================================================================
-    // BACKWARD CHAINING
-    // ========================================================================
+
     private Map<String, Object> runBackwardChaining() {
         Map<String, Object> bc = new LinkedHashMap<>();
         bc.put("solutionFound", false);
@@ -345,9 +317,7 @@ public class GameController {
         return bc;
     }
 
-    // ========================================================================
-    // PossibilityTable builder (preuzeto iz FullDemoController)
-    // ========================================================================
+
     private PossibilityTable buildTable() {
         List<Card> allCardsList = new ArrayList<>(cardsByName.values());
         List<Player> allPlayersList = new ArrayList<>(playersByName.values());
@@ -442,12 +412,7 @@ public class GameController {
                     .map(ns -> ns.getPlayer().getName())
                     .collect(Collectors.toList());
 
-            // -----------------------------------------------------------------
-            // POPRAVKA: Reveal se trazi UVEK (ne samo kad sam ja predlagac),
-            // jer Reveal nastaje i kad sam ja pokazivac. Vezivanje za sugestiju
-            // ide preko (1) karta je jedna od tri u sugestiji i (2) timestamp
-            // se poklapa sa timestamp-om sugestije.
-            // -----------------------------------------------------------------
+
             boolean foundReveal = false;
             for (Reveal r : allReveals) {
                 Card c = r.getCard();

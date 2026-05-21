@@ -39,10 +39,10 @@ end
 
 
 
-rule "5.2.3a - Karta u 3+ sugestija bez Reveal-a -> Score += 3"
+rule "5.2.3a - Karta u 4+ sugestija bez Reveal-a -> Score += 2"
     when
         $card: Card($cName: name)
-        Number(intValue >= 3) from accumulate(
+        Number(intValue >= 4) from accumulate(
             $s: Suggestion(suspect == $card || weapon == $card || room == $card)
                 over window:length(10),
             count($s)
@@ -51,14 +51,14 @@ rule "5.2.3a - Karta u 3+ sugestija bez Reveal-a -> Score += 3"
         $cs: CardScore(card == $card, score > 0)
         not ScoreApplied(ruleId == "5.2.3a", key == $cName)
     then
-        modify($cs) { setScore($cs.getScore() + 3) };
+        modify($cs) { setScore($cs.getScore() + 2) };
         insert(new ScoreApplied("5.2.3a", $cName));
-        System.out.println("[5.2.3a] " + $cName + " u 3+ sugestija bez Reveal -> Score += 3 (sada "
+        System.out.println("[5.2.3a] " + $cName + " u 4+ sugestija bez Reveal -> Score += 2 (sada "
                 + $cs.getScore() + ")");
 end
 
 
-rule "5.2.3b - Sugestija bez ijednog pokazivanja -> Score += 2 za sve karte"
+rule "5.2.3b - Sugestija bez ijednog pokazivanja -> Score += 3 za sve karte"
     when
         $sug: Suggestion($sCard: suspect, $wCard: weapon, $rCard: room, $sugId: turnNumber)
         Number(intValue >= 2) from accumulate(
@@ -70,7 +70,7 @@ rule "5.2.3b - Sugestija bez ijednog pokazivanja -> Score += 2 za sve karte"
         $cs: CardScore(card == $card, score > 0)
         not ScoreApplied(ruleId == "5.2.3b", key == ($sugId + ":" + $cName))
     then
-        modify($cs) { setScore($cs.getScore() + 2) };
+        modify($cs) { setScore($cs.getScore() + 3) };
         insert(new ScoreApplied("5.2.3b", $sugId + ":" + $cName));
         System.out.println("[5.2.3b] sug" + $sugId + " bez pokazivanja -> Score("
                 + $cName + ") += 2 (sada " + $cs.getScore() + ")");
