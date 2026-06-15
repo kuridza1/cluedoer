@@ -374,9 +374,12 @@
             font-weight: bold; text-transform: uppercase;
             letter-spacing: 0.4px; white-space: nowrap; flex-shrink: 0;
         }
-        .rule-badge.fwd { background: #e5f1ff; color: #2c5282; }
-        .rule-badge.cep { background: #faeeda; color: #633806; }
-        .rule-badge.tmp { background-color: #6c757d; color: #ffffff;}
+        .rule-badge.fwd { background-color: #e5f1ff;color: #2c5282;}
+        .rule-badge.tmp { background-color: #7e9ac1;color: #f0f9fe;}
+        .rule-badge.cep { background-color: #5476a5;color: #ffffff;}
+        .rule-badge.fwd-strat { background-color: #fff3cd;color: #856404;}
+        .rule-badge.tmp-strat { background-color: #e9c454;color: #ffffff;}
+        .rule-badge.cep-strat { background-color: #c89f22;color: #fff3cd;}
         .rule-id { font-size: 12px; font-weight: 600; color: #888; white-space: nowrap; flex-shrink: 0; min-width: 54px; }
         .rule-desc { color: #1a1a1a; flex: 1; }
         .rule-effect { font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
@@ -713,22 +716,81 @@
        RENDER
        ========================================================= */
     const RULE_META = {
-        "5.1.1":  { type:"fwd", desc:"Sopstvena karta → score = 0", effect:"score=0" },
-        "5.1.2a": { type:"fwd", desc:"Karta u igri (Owns postoji) → score = 0", effect:"score=0" },
-        "5.1.2b": { type:"fwd", desc:"Reveal → kreira Owns za pokazivača", effect:"+Owns" },
-        "5.1.2c": { type:"fwd", desc:"Owns(A,X) → NotOwns za sve ostale igrače", effect:"+NotOwns" },
-        "5.1.2d": { type:"tmp", desc: "NoShow okinuo, protivnik nema kartu", effect: "+NotOwns"},
-        "5.1.2e": { type:"fwd", desc:"Sopstvena karta → NotOwns za sve druge karte te kategorije", effect:"+NotOwns" },
-        "5.1.2f": { type:"fwd", desc:"Protivnik popunio ruku → NotOwns za preostale karte", effect:"+NotOwns" },
-        "5.1.3a": { type:"fwd", desc:"Karta koju niko ne poseduje → u koverti", effect:"+Solution" },
-        "5.1.3b": { type:"fwd", desc:"Karta u koverti → score = 100", effect:"score=100" },
-        "5.1.3c": { type:"fwd", desc:"Jedini kandidat u kategoriji → u koverti", effect:"+Solution" },
-        "5.1.3d": { type:"fwd", desc:"Karta u koverti → NotOwns za sve igrače", effect:"+NotOwns" },
-        "5.1.4":  { type:"tmp", desc: "Zakljucak iz PrivateShow karata - jedna ostala", effect: "+Owns"},
-        "5.2.3a": { type:"cep", desc:"Karta u 4+ sugestija za 20min bez Reveal-a → sumnja +2", effect:"score+2" },
-        "5.2.3b": { type:"cep", desc:"Sugestija bez pokazivanja u 5min → sumnja +3 za sve 3 karte", effect:"score+3" },
-        "5.2.3c": { type:"cep", desc:"Karta nikad pokazana u poslednjih 20min → sumnja +1", effect:"score+1" },
-        "5.2.3d": { type:"cep", desc: "Karta koju ne posedujem i ne znam da neko poseduje predugo nije ispitana", effect: "score+1"}
+        "5.1.1":  { type:"fwd", system: "deduct", desc:"Sopstvena karta → score = 0", effect:"score=0" },
+        "5.1.2a": { type:"fwd", system: "deduct", desc:"Karta u igri (Owns postoji) → score = 0", effect:"score=0" },
+        "5.1.2b": { type:"fwd", system: "deduct", desc:"Reveal → kreira Owns za pokazivača", effect:"+Owns" },
+        "5.1.2c": { type:"fwd", system: "deduct", desc:"Owns(A,X) → NotOwns za sve ostale igrače", effect:"+NotOwns" },
+        "5.1.2d": { type:"tmp", system: "deduct", desc: "NoShow okinuo, protivnik nema kartu", effect: "+NotOwns"},
+        "5.1.2e": { type:"fwd", system: "deduct", desc:"Sopstvena karta → NotOwns za sve druge karte te kategorije", effect:"+NotOwns" },
+        "5.1.2f": { type:"fwd", system: "deduct", desc:"Protivnik popunio ruku → NotOwns za preostale karte", effect:"+NotOwns" },
+        "5.1.3a": { type:"fwd", system: "deduct", desc:"Karta koju niko ne poseduje → u koverti", effect:"+Solution" },
+        "5.1.3b": { type:"fwd", system: "deduct", desc:"Karta u koverti → score = 100", effect:"score=100" },
+        "5.1.3c": { type:"fwd", system: "deduct", desc:"Jedini kandidat u kategoriji → u koverti", effect:"+Solution" },
+        "5.1.3d": { type:"fwd", system: "deduct", desc:"Karta u koverti → NotOwns za sve igrače", effect:"+NotOwns" },
+        "5.1.4":  { type:"tmp", system: "deduct", desc: "Zakljucak iz PrivateShow karata - jedna ostala", effect: "+Owns"},
+        "5.2.3a": { type:"cep", system: "deduct", desc:"Karta u 4+ sugestija za 20min bez Reveal-a → sumnja +2", effect:"score+2" },
+        "5.2.3b": { type:"cep", system: "deduct", desc:"Sugestija bez pokazivanja u 5min → sumnja +3 za sve 3 karte", effect:"score+3" },
+        "5.2.3c": { type:"cep", system: "deduct", desc:"Karta nikad pokazana u poslednjih 20min → sumnja +1", effect:"score+1" },
+        "5.2.3d": { type:"cep", system: "deduct", desc: "Karta koju ne posedujem i ne znam da neko poseduje predugo nije ispitana", effect: "score+1"},
+
+        "6.3.1-PENALTY":  { type:"cep", system: "strat", desc:"Ista karta u 3 uzastopne sugestije → visoka sumnja", effect:"+HighSuspicion" },
+        "6.3.2":  { type:"cep", system: "strat", desc:"Protivnik bar 2 puta koristi kartu koju ima → blefiraju", effect:"+Profile(BLUFFING)" },
+        "6.3.3":  { type:"cep", system: "strat", desc:"Promena obrasca sugestija u kasnoj igri → agresivan stil", effect:"+Profile(AGGRESSIVE)" },
+        "6.3.4":  { type:"cep", system: "strat", desc:"Igrač koristio kartu pa prestao → verovatno zna za nju", effect:"+KnowsCard" },
+        "6.3.5":  { type:"cep", system: "strat", desc:"Ista prostorija iskorišćena bar 2 puta → fokus na nju", effect:"+RoomFocus" },
+
+        // CEP korekcije i korišćenje informacija
+        "FOCUS_BONUS":          { type:"cep", system: "strat", desc:"Protivnik fokusira prostoriju → uvećaj njen score", effect:"score+2" },
+        "PRIORITIZE":           { type:"cep", system: "strat", desc:"Karta pod visokom sumnjom → forsiraj za sugestiju", effect:"+SuggestCard" },
+        "AVOID_KNOWN":          { type:"cep", system: "strat", desc:"Kasna igra → ukloni karte za koje protivnik već zna", effect:"-SuggestCard" },
+        "BUMP_SUSPICION":       { type:"cep", system: "strat", desc:"Karta pod visokom sumnjom → blagi bonus na sumnju", effect:"score+1" },
+        "CEP_REC":              { type:"cep", system: "strat", desc:"Visoka sumnja detektovana → menjaj stratešku preporuku", effect:"+StrategicRecommendation" },
+        "AGG_WARN":             { type:"cep", system: "strat", desc:"Agresivan igrač u kasnoj igri → izdaj rizik", effect:"+RiskWarning(MEDIUM)" },
+        "REMOVE_OLD_PROFILE":   { type:"cep", system: "strat", desc:"Dodat novi profil → ukloni prethodni profil igrača", effect:"-Profile" },
+        "6.3.1a":               { type:"cep", system: "strat", desc:"Early/Mid spam karte od protivnika → smanji score", effect:"score-1" },
+        "6.3.1b":               { type:"cep", system: "strat", desc:"Late game spam karte (opsesija) → povećaj score", effect:"score+3" },
+
+        // 6.1.1 - Profilisanje protivnika
+        "6.1.1-DEFENSIVE":  { type:"fwd", system: "strat", desc:"Igrač pokazao istu kartu 2+ puta → defanzivan profil", effect:"+Profile(DEFENSIVE)" },
+        "6.1.1-BLUFF":   { type:"fwd", system: "strat", desc:"Igrač sugeriše kartu koju sam poseduje → blefira", effect:"+Profile(BLUFFING)" },
+        "6.1.1-ROOM_FOCUS": { type:"fwd", system: "strat", desc:"Igrač koristi prostoriju 3+ puta → fokus na sobu", effect:"+RoomFocus" },
+
+        // Uticaji profila na bodovanje
+        "BLUFF_IMPACT":     { type:"fwd", system: "strat", desc:"Sugerisana karta od blefera → smanji poverenje", effect:"score-1" },
+        "DEF_SIGNAL":       { type:"fwd", system: "strat", desc:"Sugerisana karta od defanzivca → informativno", effect:"score+1" },
+        "AGG_VOLATILITY":   { type:"fwd", system: "strat", desc:"Sugestija od agresivnog igrača → nestabilan izvor", effect:"score-1" },
+        "ROOM_FOCUS_BOOST": { type:"fwd", system: "strat", desc:"Zabeležen fokus na prostoriju → značajan skok", effect:"score+3" },
+        "KNOWN_CARD_PENALTY": { type:"fwd", system: "strat", desc:"Protivnik sigurno zna za kartu → penal na score", effect:"score-3" },
+        "HS_PENALTY":       { type:"fwd", system: "strat", desc:"Visoka sumnja da protivnik poseduje → penal", effect:"score-2" },
+
+        // 6.2.2 - Izbor karte za pokazivanje drugima
+        "6.2.2-KNOWN":     { type:"fwd", system: "strat", desc:"Protivnik već zna za kartu → pokaži ponovo", effect:"+ShowRecommendation" },
+        "6.2.2-PREFER_NON_ROOM":             { type:"fwd", system: "strat", desc:"Čuvaj prostorije za sebe, pokaži oružje/sumnjivog", effect:"+ShowRecommendation" },
+        "6.2.2-DEFENSIVE_LOWEST": { type:"fwd", system: "strat", desc:"Defanzivan protivnik → pokaži mu najniži score", effect:"+ShowRecommendation" },
+        "OWNED_PENALTY":               { type:"fwd", system: "strat", desc:"Karta je u nečijem posedu → izbaci iz opcija", effect:"score=0" },
+
+        // NOVOPRIHVAĆENI PRECIZNI DROOLS KLJUČEVI:
+
+        // 6.1 Faze igre (Šablon)
+        "6.1-EARLY_GAME": { type:"tmp", system: "strat", desc:"Izračunavanje trenutne faze partije -> Rana igra", effect:"+GameState" },
+        "6.1-MID_GAME":   { type:"tmp", system: "strat", desc:"Izračunavanje trenutne faze partije -> Srednja igra", effect:"+GameState" },
+        "6.1-LATE_GAME":  { type:"tmp", system: "strat", desc:"Izračunavanje trenutne faze partije -> Kasna igra", effect:"+GameState" },
+
+        // 6.2.1 Globalne strategije i pretraga maks-a
+        "6.2.1-MAX":         { type:"fwd", system: "strat", desc:"Pronalaženje karte sa najvećim score-om", effect:"+PriorityCard" },
+        "6.2.1-STRAT-EARLY": { type:"fwd", system: "strat", desc:"Rana igra → maksimizuj informacioni dobitak", effect:"+StrategicRecommendation" },
+        "6.2.1-STRAT-MID":   { type:"fwd", system: "strat", desc:"Srednja igra → kombinuj poznate i nepoznate karte", effect:"+StrategicRecommendation" },
+        "6.2.1-STRAT-LATE":  { type:"fwd", system: "strat", desc:"Kasna igra → forsiraj eliminaciju i optužbu", effect:"+StrategicRecommendation" },
+
+        // 6.2.1 Predlozi po kategorijama iz Šablona
+        "6.2.1-SUSPECT": { type:"tmp", system: "strat", desc:"Generisan predlog najbolje karte za Osumnjičenog", effect:"+SuggestCard" },
+        "6.2.1-WEAPON":  { type:"tmp", system: "strat", desc:"Generisan predlog najbolje karte za Oružje", effect:"+SuggestCard" },
+        "6.2.1-ROOM":    { type:"tmp", system: "strat", desc:"Generisan predlog najbolje karte za Prostoriju", effect:"+SuggestCard" },
+
+        // 6.2.3 Procene rizika
+        "6.2.3-LOW":  { type:"fwd", system: "strat", desc:"Standardan tok igre, nema uočenog blefa", effect:"+RiskWarning(LOW)" },
+        "6.2.3-MID":  { type:"fwd", system: "strat", desc:"Detektovan blefer van kasne igre → oprez", effect:"+RiskWarning(MEDIUM)" },
+        "6.2.3-HIGH": { type:"fwd", system: "strat", desc:"Kasna igra + blefer → visok rizik od optužbe", effect:"+RiskWarning(HIGH)" }
     };
 
     function effectClass(e) {
@@ -738,11 +800,16 @@
     }
 
     // Pomoćna funkcija koja određuje tekst koji će pisati na samoj znački na osnovu tipa
-    function getBadgeText(type) {
-        if (type === 'cep') return 'CEP DEDUCT';
-        if (type === 'tmp') return 'TEMPLATE DEDUCT';
-        return 'FORWARD DEDUCT';
+    function getBadgeText(type, system) {
+        const sysName = system === 'strat' ? 'STRAT' : 'DEDUCT';
+        if (type === 'cep') return `CEP ${sysName}`;
+        if (type === 'tmp') return `TEMPLATE ${sysName}`;
+        return `FORWARD ${sysName}`;
     }
+
+    // Unutar renderAppliedRules map funkcije, HTML bi izgledao ovako:
+    // Klasa se dinamički sklapa, npr: class="rule-badge tmp" ili class="rule-badge tmp-strat"
+
 
     function renderAppliedRules(rules) {
         const el = document.getElementById('appliedRulesContainer');
@@ -765,14 +832,15 @@
             <span class="rule-desc" style="color:#888">${detail}</span>
             ${ts ? `<span class="rule-ts">${ts}</span>` : ''}
         </div>`;
+            const systemSuffix = m.system === 'strat' ? '-strat' : '';
 
             return `<div class="rule-row">
-            <span class="rule-badge ${m.type}">${getBadgeText(m.type)}</span>
-            <span class="rule-id">${id}</span>
-            <span class="rule-desc">${m.desc} <span style="color:#888;font-size:12px">[${detail}]</span></span>
-            <span class="rule-effect ${effectClass(m.effect)}">${m.effect}</span>
-            ${ts ? `<span class="rule-ts">${ts}</span>` : ''}
-        </div>`;
+    <span class="rule-badge ${m.type}${systemSuffix}">${getBadgeText(m.type, m.system)}</span>
+    <span class="rule-id">${id}</span>
+    <span class="rule-desc">${m.desc} <span style="color:#888;font-size:12px">[${detail}]</span></span>
+    <span class="rule-effect ${effectClass(m.effect)}">${m.effect}</span>
+    ${ts ? `<span class="rule-ts">${ts}</span>` : ''}
+</div>`;
         }).join('');
     }
 

@@ -9,6 +9,7 @@ import com.ftn.sbnz.model.Card;
 import com.ftn.sbnz.model.CardScore;
 import com.ftn.sbnz.model.GameState;
 import com.ftn.sbnz.model.GameStatus;
+import com.ftn.sbnz.model.AppliedRule;
 
 template "game_state"
 
@@ -35,6 +36,7 @@ then
 
     // 5. Insert the new state dictated by your spreadsheet row
     insert(new GameState(GameStatus.@{status}));
+    insert(new AppliedRule("6.1-@{status}", "Promena stanja igre u: @{status}"));
     System.out.println("[6.1] GAME STATE -> @{status}");
 end
 
