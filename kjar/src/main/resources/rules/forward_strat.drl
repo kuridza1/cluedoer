@@ -369,3 +369,18 @@ then
     insert(new RiskWarning(RiskLevel.LOW, null,
         "Nije detektovan rizik. Nastavi prema strategiji."));
 end
+
+// Karte koje neko poseduje ne treba sugerisati - nemaju informacionu vrednost
+rule "OWNED CARD - NO SUGGESTION"
+salience 25
+when
+    Owns($p: player, $c: card)
+    $cs: CardScore(card == $c, score > 0)
+    not ScoreApplied(ruleId == "OWNED_PENALTY", key == $p.getName() + ":" + $c.getName())
+then
+    modify($cs) {
+        setScore(0)
+    };
+    insert(new ScoreApplied("OWNED_PENALTY", $p.getName() + ":" + $c.getName()));
+    System.out.println("OWNED PENALTY: " + $c.getName() + " (poseduje " + $p.getName() + ") -> score 0");
+end

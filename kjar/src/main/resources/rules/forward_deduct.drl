@@ -11,6 +11,7 @@ import com.ftn.sbnz.model.NoShow;
 import com.ftn.sbnz.model.Solution;
 import com.ftn.sbnz.model.Suggestion;
 import com.ftn.sbnz.model.PrivateShow;
+import com.ftn.sbnz.model.AppliedRule;
 
 declare Suggestion
     @role(event)
@@ -41,16 +42,20 @@ rule "5.1.1 - Sopstvena karta: Score = 0"
         $o: Owns($player: player, $card: card)
         Player(this == $player, self == true)
         $s: CardScore(card == $card, score != 0)
+        not AppliedRule(ruleId == "5.1.1")
     then
         modify($s) { setScore(0) };
+        insert(new AppliedRule("5.1.1", $card.getName()));
 end
 
 rule "5.1.2a - Karta u igri: Score = 0"
     when
         Owns($card: card)
         $s: CardScore(card == $card, score != 0)
+        not AppliedRule(ruleId == "5.1.2a", detail == $card.getName())
     then
         modify($s) { setScore(0) };
+        insert(new AppliedRule("5.1.2a", $card.getName()));
 end
 
 rule "5.1.2b - Reveal -> Owns"
@@ -59,6 +64,7 @@ rule "5.1.2b - Reveal -> Owns"
         not Owns(player == $p, card == $c)
     then
         insert(new Owns($p, $c));
+        insert(new AppliedRule("5.1.2b", $p.getName() + " -> " + $c.getName()));
 end
 
 rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
@@ -68,52 +74,48 @@ rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
         not NotOwns(player == $other, card == $card)
     then
         insert(new NotOwns($other, $card));
+        insert(new AppliedRule("5.1.2c", $other.getName() + " !-> " + $card.getName()));
 end
 
-
-rule "5.1.2e Sopstvena karta kategorije ->  NotOwns nijednu drugu kartu te kategorije"
+rule "5.1.2e - Sopstvena karta kategorije -> NotOwns nijednu drugu kartu te kategorije"
     when
         Player(self == true, $self: this)
-
         Owns(player == $self, $ownedCard: card)
-
         $otherCard: Card(this != $ownedCard)
-
         not Owns(player == $self, card == $otherCard)
         not NotOwns(player == $self, card == $otherCard)
     then
         insert(new NotOwns($self, $otherCard));
+        insert(new AppliedRule("5.1.2e", $self.getName() + " !-> " + $otherCard.getName()));
 end
 
-rule "5.1.2f Protivnik Owns = handSize -> NotOwns ostale karte"
+rule "5.1.2f - Protivnik Owns = handSize -> NotOwns ostale karte"
     when
         $p: Player(self == false, $hs: handSize)
-
         Number(intValue >= $hs) from accumulate(
             Owns(player == $p),
             count(1)
         )
-
         $card: Card()
-
         not Owns(player == $p, card == $card)
         not NotOwns(player == $p, card == $card)
     then
         insert(new NotOwns($p, $card));
+        insert(new AppliedRule("5.1.2f", $p.getName() + " !-> " + $card.getName()));
 end
+
 rule "5.1.3a - Karta koju niko ne poseduje je u koverti"
     when
         $card: Card($cName: name)
-        // Za svakog igrača postoji NotOwns za ovu kartu
         not (
             Player($p: this)
             and not NotOwns(player == $p, card == $card)
         )
-        // Još nije zaključeno da je u koverti
         not Solution(card == $card)
     then
         insert(new Solution($card));
-        System.out.println("[5.1.3] " + $cName + " je u koverti (svi igrači imaju NotOwns)");
+        insert(new AppliedRule("5.1.3a", $cName));
+        System.out.println("[5.1.3] " + $cName + " je u koverti");
 end
 
 rule "5.1.3b - Karta u koverti -> Score = 100"
@@ -122,6 +124,36 @@ rule "5.1.3b - Karta u koverti -> Score = 100"
         $cs: CardScore(card == $card, score < 100)
     then
         modify($cs) { setScore(100) };
-        System.out.println("[5.1.3b] " + $card.getName() + " Score = 100 (potvrđeno rešenje)");
+        insert(new AppliedRule("5.1.3b", $card.getName()));
+        System.out.println("[5.1.3b] " + $card.getName() + " Score = 100");
 end
 
+rule "5.1.3c - Jedina karta u kategoriji bez NotOwns za sve -> u koverti"
+    when
+        $type: CardType()
+        Number(intValue == 1) from accumulate(
+            $c: Card(type == $type)
+            and CardScore(card == $c, score > 0)
+            and not Solution(card == $c),
+            count($c)
+        )
+        $card: Card(type == $type)
+        CardScore(card == $card, score > 0)
+        not Solution(card == $card)
+        not Owns(card == $card)
+    then
+        insert(new Solution($card));
+        insert(new AppliedRule("5.1.3c", $card.getName()));
+        System.out.println("[5.1.3c] " + $card.getName() + " jedini kandidat");
+end
+
+rule "5.1.3d - Karta u koverti -> NotOwns za sve igrače"
+    when
+        Solution($card: card)
+        $p: Player()
+        not NotOwns(player == $p, card == $card)
+    then
+        insert(new NotOwns($p, $card));
+        insert(new AppliedRule("5.1.3d", $p.getName() + " !-> " + $card.getName()));
+        System.out.println("[5.1.3d] " + $card.getName() + " -> NotOwns(" + $p.getName() + ")");
+end
