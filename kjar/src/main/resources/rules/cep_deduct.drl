@@ -12,6 +12,7 @@ import com.ftn.sbnz.model.PrivateShow;
 import com.ftn.sbnz.model.Solution;
 import com.ftn.sbnz.model.Suggestion;
 import com.ftn.sbnz.model.ScoreApplied;
+import com.ftn.sbnz.model.AppliedRule;
 
 declare Suggestion
     @role(event)
@@ -37,14 +38,14 @@ declare PrivateShow
     @expires(2h)
 end
 
-
-
-rule "5.2.3a - Karta u 4+ sugestija bez Reveal-a -> Score += 2"
+rule "5.2.3a - Karta u 4+ sugestija u 20min bez Reveal-a -> Score += 2"
     when
         $card: Card($cName: name)
         Number(intValue >= 4) from accumulate(
-            $s: Suggestion(suspect == $card || weapon == $card || room == $card)
-                over window:length(10),
+            $s: Suggestion(
+                    suspect == $card || weapon == $card || room == $card
+                )
+                over window:time(20m),
             count($s)
         )
         not Reveal(card == $card)
@@ -53,16 +54,19 @@ rule "5.2.3a - Karta u 4+ sugestija bez Reveal-a -> Score += 2"
     then
         modify($cs) { setScore($cs.getScore() + 2) };
         insert(new ScoreApplied("5.2.3a", $cName));
-        System.out.println("[5.2.3a] " + $cName + " u 4+ sugestija bez Reveal -> Score += 2 (sada "
-                + $cs.getScore() + ")");
+        insert(new AppliedRule("5.2.3a", $cName + " (score+2)"));
+        System.out.println("[5.2.3a] " + $cName
+            + " u 4+ sugestija (20min) bez Reveal -> Score += 2 (sada "
+            + $cs.getScore() + ")");
 end
 
-
-rule "5.2.3b - Sugestija bez ijednog pokazivanja -> Score += 3 za sve karte"
+rule "5.2.3b - Sugestija bez pokazivanja u 5min -> Score += 3 za sve karte"
     when
         $sug: Suggestion($sCard: suspect, $wCard: weapon, $rCard: room, $sugId: turnNumber)
+
+        // Brojimo NoShow događaje koji su vezani za ovu sugestiju i desili se unutar 5 minuta od nje
         Number(intValue >= 2) from accumulate(
-            $ns: NoShow(suggestion == $sug),
+            $ns: NoShow(suggestion == $sug, this after[0s, 5m] $sug),
             count($ns)
         )
         not PrivateShow(suggestion == $sug)
@@ -72,15 +76,18 @@ rule "5.2.3b - Sugestija bez ijednog pokazivanja -> Score += 3 za sve karte"
     then
         modify($cs) { setScore($cs.getScore() + 3) };
         insert(new ScoreApplied("5.2.3b", $sugId + ":" + $cName));
-        System.out.println("[5.2.3b] sug" + $sugId + " bez pokazivanja -> Score("
-                + $cName + ") += 2 (sada " + $cs.getScore() + ")");
+        insert(new AppliedRule("5.2.3b", "sug#" + $sugId + " " + $cName + " (score+3)"));
+        System.out.println("[5.2.3b] sug" + $sugId
+            + " bez pokazivanja (5min) -> Score(" + $cName + ") += 3 (sada " + $cs.getScore() + ")");
 end
 
-rule "5.2.3c - Karta nikad pokazana posle 6+ poteza -> Score += 1"
+rule "5.2.3c - Karta pomenuta 3+ puta u roku od 20min bez Reveal-a -> Score += 1"
     when
         $card: Card($cName: name)
-        Number(intValue >= 6) from accumulate(
-            $s: Suggestion(),
+        // Ako je u zadnjih 20 minuta (oko 6-7 poteza) karta pomenuta 3 ili više puta
+        Number(intValue >= 3) from accumulate(
+            $s: Suggestion(suspect == $card || weapon == $card || room == $card)
+                over window:time(20m),
             count($s)
         )
         not Reveal(card == $card)
@@ -90,7 +97,39 @@ rule "5.2.3c - Karta nikad pokazana posle 6+ poteza -> Score += 1"
     then
         modify($cs) { setScore($cs.getScore() + 1) };
         insert(new ScoreApplied("5.2.3c", $cName));
-        System.out.println("[5.2.3c] " + $cName + " nikad pokazana posle 6+ poteza -> Score += 1 (sada "
-                + $cs.getScore() + ")");
+        insert(new AppliedRule("5.2.3c", $cName + " (score+1)"));
+        System.out.println("[5.2.3c] " + $cName
+            + " pomenuta 3+ puta u zadnjih 20min bez Reveal -> Score += 1 (sada " + $cs.getScore() + ")");
 end
 
+rule "5.2.3d - Karta potpuno nekorišćena i nepoznata 20min -> Score += 1"
+    when
+        // 1. Uslov: Proveravamo da li je u zadnjih 20 minuta odigrano ukupno 7 ili više poteza/sugestija u celoj igri.
+        // Ovo garantuje da pravilo neće opaliti odmah na početku (u 1., 2. potezu...) već tek od 7. poteza pa nadalje.
+        Number(intValue >= 7) from accumulate(
+            $anySug: Suggestion() over window:time(20m),
+            count($anySug)
+        )
+
+        $card: Card($cName: name)
+
+        // 2. Uslov: U okviru tog istog prozora, za OVU specifičnu kartu ne postoji nijedna sugestija
+        not (
+            Suggestion(
+                suspect == $card || weapon == $card || room == $card
+            ) over window:time(20m)
+        )
+
+        not Owns(card == $card)
+        $cs: CardScore(card == $card, score > 0)
+        not ScoreApplied(ruleId == "5.2.3d", key == $cName)
+    then
+        modify($cs) { setScore($cs.getScore() + 1) };
+
+        insert(new ScoreApplied("5.2.3d", $cName));
+        insert(new AppliedRule("5.2.3d", $cName + " (nekorišćena 20m, score+1)"));
+
+        System.out.println("[5.2.3d] Karta " + $cName
+            + " se nije pojavila 20min niti je iko posjeduje -> Score += 1 (sada "
+            + $cs.getScore() + ")");
+end

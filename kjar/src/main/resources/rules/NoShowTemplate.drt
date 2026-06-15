@@ -7,17 +7,23 @@ package rules;
 import com.ftn.sbnz.model.NoShow;
 import com.ftn.sbnz.model.NotOwns;
 import com.ftn.sbnz.model.Player;
-import com.ftn.sbnz.model.NoShow;
 import com.ftn.sbnz.model.Suggestion;
+import com.ftn.sbnz.model.Card;
+import com.ftn.sbnz.model.AppliedRule;
+
 template "NoShow-NotOwns-template"
 
 rule "5.1.2d - NoShow -> NotOwns za @{ruleName}"
     when
-        NoShow($p: player, $sug: suggestion)
+        $ns: NoShow($p: player, $sug: suggestion)
         $card: Card() from $sug.@{getter}()
         not NotOwns(player == $p, card == $card)
     then
         insert(new NotOwns($p, $card));
+        insert(new AppliedRule(
+            "5.1.2d",
+            $p.getName() + " nema kartu " + $card.getName() + " (@{ruleName})"));
+        System.out.println("[5.1.2d-TEMPLATE] NoShow -> " + $p.getName() + " nema " + $card.getName());
 end
 
 end template

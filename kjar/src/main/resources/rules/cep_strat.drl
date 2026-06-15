@@ -24,6 +24,7 @@ import com.ftn.sbnz.model.HighSuspicion;
 import com.ftn.sbnz.model.KnowsCard;
 import com.ftn.sbnz.model.ScoreApplied;
 import com.ftn.sbnz.model.ProfileProcessed;
+import com.ftn.sbnz.model.AppliedRule;
 
 // ============================================================================
 // 6.3 - CEP ANALIZA PONAŠANJA (STRATEŠKI SISTEM - NIVO 3)
@@ -33,8 +34,6 @@ import com.ftn.sbnz.model.ProfileProcessed;
 // 6.3.1 - Detekcija visoke sumnje kada igrač koristi istu kartu u više uzastopnih sugestija
 // ============================================================================
 
-// Ako protivnik koristi istu kartu u tri uzastopne sugestije, to znaci da je
-// ili fokusiran na nju (veruje da je resenje) ili je pokusava da je eliminiše
 rule "6.3.1 - VISOKA SUMNJA - ISTA KARTA U VISE UZASTOPNIH SUGESTIJA"
 when
     $p: Player(self == false)
@@ -50,6 +49,7 @@ when
     not HighSuspicion(player == $p, card == $c)
 then
     insert(new HighSuspicion($p, $c));
+    insert(new AppliedRule("6.3.1", $p.getName() + " sumnja na " + $c.getName()));
     System.out.println("[6.3.1] VISOKA SUMNJA - " + $p.getName() +
                        " koristi " + $c.getName() + " u vise uzastopnih sugestija");
 end
@@ -59,8 +59,6 @@ end
 // 6.3.2 - Detekcija blefiranja kada igrač više puta koristi kartu koju sigurno poseduje
 // ============================================================================
 
-// Ako protivnik u svojim sugestijama bar 2 puta navede kartu za koju znamo
-// da je poseduje, verovatno blefira – pokusava da zbuni ostale igrace
 rule "6.3.2 - BLEFIRANJE - VISE PUTA KORISTI SOPSTVENU KARTU"
 when
     $p: Player(self == false)
@@ -78,6 +76,7 @@ when
 
 then
     insert(new Profile($p, ProfileType.BLUFFING));
+    insert(new AppliedRule("6.3.2", $p.getName() + " profilisan kao BLUFFING"));
     System.out.println("[6.3.2] BLEFIRANJE - " + $p.getName() +
                        " vise puta koristi sopstvenu kartu " + $c.getName());
 end
@@ -87,8 +86,6 @@ end
 // 6.3.3 - Detekcija agresivnog profila u kasnoj igri
 // ============================================================================
 
-// U kasnoj igri, ako protivnik naglo promeni obrazac sugestija (razlicite karte
-// u uzastopnim potezima), verovatno je postao agresivan i sprema se za optuzbu
 rule "6.3.3 - AGRESIVAN PROFIL - NAGLA PROMENA OBRASCA U KASNOJ IGRI"
 when
     GameState(status == GameStatus.LATE_GAME)
@@ -104,6 +101,7 @@ when
     not Profile(player == $p, profile == ProfileType.AGGRESSIVE)
 then
     insert(new Profile($p, ProfileType.AGGRESSIVE));
+    insert(new AppliedRule("6.3.3", $p.getName() + " profilisan kao AGGRESSIVE"));
     System.out.println("[6.3.3] AGRESIVAN PROFIL - " + $p.getName() +
                        " naglo promenio obrazac sugestija u kasnoj igri");
 end
@@ -113,21 +111,17 @@ end
 // 6.3.4 - Zaključak da protivnik zna za kartu
 // ============================================================================
 
-// Ako je protivnik koristio kartu bar 2 puta, a zatim potpuno prestao da je
-// koristi, verovatno je saznao da je ta karta kod nekog drugog ili u koverti
 rule "6.3.4 - VEROVATNO ZNA ZA KARTU - PRESTAO DA KORISTI"
 when
     $p: Player(self == false)
     $c: Card()
 
-    // Igrač je koristio kartu u NAJMANJE 2 sugestije
     $count: Number(intValue >= 2) from accumulate(
         Suggestion(suggester == $p,
                    suspect == $c || weapon == $c || room == $c),
         count(1)
     )
 
-    // Prestao je da je koristi u novijim sugestijama
     $lastSug: Suggestion(suggester == $p,
                          suspect == $c || weapon == $c || room == $c)
     not Suggestion(suggester == $p, this after $lastSug,
@@ -139,6 +133,7 @@ when
     not KnowsCard(player == $p, card == $c)
 then
     insert(new KnowsCard($p, $c));
+    insert(new AppliedRule("6.3.4", $p.getName() + " zna za " + $c.getName()));
     System.out.println("[6.3.4] VEROVATNO ZNA - " + $p.getName() +
                        " prestao da koristi " + $c.getName() + " (koristio je " + $count + " puta)");
 end
@@ -148,8 +143,6 @@ end
 // 6.3.5 - Detekcija fokusa na prostoriju
 // ============================================================================
 
-// Ako protivnik bar 2 puta koristi istu prostoriju u sugestijama, verovatno
-// je fokusiran na nju – ona mu je ili meta ili veruje da je u koverti
 rule "6.3.5 - FOKUS NA PROSTORIJU - ISTA PROSTORIJA"
 when
     $p: Player(self == false)
@@ -161,6 +154,7 @@ when
     not RoomFocus(player == $p, room == $r)
 then
     insert(new RoomFocus($p, $r));
+    insert(new AppliedRule("6.3.5", $p.getName() + " fokusiran na " + $r.getName()));
     System.out.println("[6.3.5] FOKUS NA PROSTORIJU - " + $p.getName() +
                        " cesto koristi " + $r.getName());
 end
@@ -170,8 +164,6 @@ end
 // CEP PRAVILA ZA KORISCENJE INFORMACIJA
 // ============================================================================
 
-// Ako je protivnik fokusiran na neku prostoriju, povecavamo njen score –
-// veca je verovatnoca da je ona resenje ili da je protivnik cilja
 rule "KORIGUJ SCORE ZA FOKUS"
 salience 20
 when
@@ -181,11 +173,11 @@ when
 then
     modify($cs) { setScore($cs.getScore() + 2) };
     insert(new ScoreApplied("FOCUS_BONUS", $p.getName() + ":" + $r.getName()));
+    insert(new AppliedRule("FOCUS_BONUS", $r.getName() + " (score+2 za fokus)"));
     System.out.println("CEP KOREKCIJA: +2 score za " + $r.getName()
             + " (fokus " + $p.getName() + ")");
 end
 
-// Karte pod visokom sumnjom dobijaju prioritet za sugestiju – treba ih testirati
 rule "PRIORITIZUJ VISOKU SUMNJU"
 salience 15
 when
@@ -195,11 +187,10 @@ when
 then
     insert(new SuggestCard($c.getType(), $c));
     insert(new ScoreApplied("PRIORITIZE", $c.getName()));
+    insert(new AppliedRule("PRIORITIZE", $c.getName() + " (prioritizovana karta)"));
     System.out.println("CEP PRIORITET: " + $c.getName() + " (visoka sumnja)");
 end
 
-// U kasnoj igri izbegavamo karte za koje znamo da ih protivnik zna –
-// njihovo testiranje nam ne daje novu informaciju
 rule "IZBEGAVAJ KARTU - KASNA IGRA"
 salience 15
 when
@@ -210,10 +201,10 @@ when
 then
     retract($sug);
     insert(new ScoreApplied("AVOID_KNOWN", $c.getName()));
+    insert(new AppliedRule("AVOID_KNOWN", $c.getName() + " (izbegavanje karte)"));
     System.out.println("CEP IZBEGAVAM: " + $c.getName() + " jer protivnik zna za nju");
 end
 
-// Karte pod visokom sumnjom dobijaju mali bonus na score – treba ih testirati
 rule "POVECAJ SCORE ZA VISOKU SUMNJU"
 salience 10
 when
@@ -223,11 +214,11 @@ when
 then
     modify($cs) { setScore($cs.getScore() + 1) };
     insert(new ScoreApplied("BUMP_SUSPICION", $p.getName() + ":" + $c.getName()));
+    insert(new AppliedRule("BUMP_SUSPICION", $c.getName() + " (score+1 za sumnju)"));
     System.out.println("CEP: +1 score za " + $c.getName() + " (visoka sumnja od "
             + $p.getName() + ")");
 end
 
-// CEP analiza moze da izmeni stratesku preporuku ako postoji visoka sumnja
 rule "CEP UTICE NA STRATESKU PREPORUKU"
 salience 5
 when
@@ -243,10 +234,10 @@ then
         " zbog visoke sumnje od strane protivnika"
     ));
     insert(new ScoreApplied("CEP_REC", $c.getName()));
+    insert(new AppliedRule("CEP_REC", "Izmenjena strateska preporuka za " + $c.getName()));
     System.out.println("CEP: Izmenjena strateška preporuka za " + $c.getName());
 end
 
-// Agresivan protivnik u kasnoj igri zahteva povecan oprez
 rule "AGRESIVAN PROTIVNIK - POVECAN OPREZ"
 salience 5
 when
@@ -259,10 +250,10 @@ then
     insert(new RiskWarning(RiskLevel.MEDIUM, $p,
         "OPREZ: Igrač " + $p.getName() + " je agresivan u kasnoj igri!"));
     insert(new ScoreApplied("AGG_WARN", $p.getName()));
+    insert(new AppliedRule("AGG_WARN", "Oprez zbog agresivnog igraca " + $p.getName()));
     System.out.println("CEP OPREZ: Agresivan protivnik " + $p.getName());
 end
 
-// Kada se doda novi profil, uklanjamo stari – svaki igrac moze imati samo jedan
 rule "REMOVE OLD PROFILE WHEN NEW IS ADDED"
 when
     $p: Player()
@@ -272,35 +263,29 @@ when
 then
     retract($oldProfile);
     insert(new ProfileProcessed($p));
+    insert(new AppliedRule("REMOVE_OLD_PROFILE", "Uklonjen stari profil za " + $p.getName()));
     System.out.println("REMOVED OLD PROFILE for " + $p.getName());
 end
 
-// U ranoj ili srednjoj igri, ako protivnik cesto koristi istu kartu (visoka sumnja),
-// to znaci da verovatno nije resenje – smanjujemo joj score
 rule "6.3.1a - EARLY MID SPAM PENALTY"
 salience 12
 when
     GameState(status == GameStatus.EARLY_GAME || status == GameStatus.MID_GAME)
-
     $hs: HighSuspicion($p: player, $c: card)
-
     $cs: CardScore(card == $c, score > 1)
-
     not ScoreApplied(
         ruleId == "EARLY_SPAM_PENALTY",
         key == ($p.getName() + ":" + $c.getName())
     )
-
 then
     modify($cs) {
         setScore($cs.getScore() - 1)
     };
-
     insert(new ScoreApplied(
         "EARLY_SPAM_PENALTY",
         $p.getName() + ":" + $c.getName()
     ));
-
+    insert(new AppliedRule("6.3.1a", $c.getName() + " (score-1)"));
     System.out.println(
         "[6.3.1a] EARLY/MID SPAM: -1 za "
         + $c.getName()
@@ -310,32 +295,25 @@ then
     );
 end
 
-// U kasnoj igri, ako protivnik cesto koristi istu kartu (visoka sumnja),
-// to znaci da verovatno misli da je resenje – povecavamo joj score
 rule "6.3.1b - LATE GAME SPAM BONUS"
 salience 13
 when
     GameState(status == GameStatus.LATE_GAME)
-
     $hs: HighSuspicion($p: player, $c: card)
-
     $cs: CardScore(card == $c, score > 0)
-
     not ScoreApplied(
         ruleId == "LATE_SPAM_BONUS",
         key == ($p.getName() + ":" + $c.getName())
     )
-
 then
     modify($cs) {
         setScore($cs.getScore() + 3)
     };
-
     insert(new ScoreApplied(
         "LATE_SPAM_BONUS",
         $p.getName() + ":" + $c.getName()
     ));
-
+    insert(new AppliedRule("6.3.1b", $c.getName() + " (score+3)"));
     System.out.println(
         "[6.3.1b] LATE SPAM: +3 za "
         + $c.getName()

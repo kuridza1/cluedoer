@@ -6,6 +6,7 @@ ruleOwns
 package rules
 
 import com.ftn.sbnz.model.*
+import com.ftn.sbnz.model.AppliedRule;
 
 template "suggest_card"
 
@@ -46,6 +47,7 @@ then
     }
 
     insert(new SuggestCard(CardType.@{category}, $card));
+    insert(new AppliedRule("6.2.1-@{category}", "Predlozena karta za kategoriju @{category}: " + $card.getName()));
 
     System.out.println(
         "[6.2.1] SUGGEST @{category} -> " + $card.getName()

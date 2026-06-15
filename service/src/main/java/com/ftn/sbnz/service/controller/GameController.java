@@ -119,8 +119,10 @@ public class GameController {
             throw new IllegalStateException("Igra nije pokrenuta. Pozovi /api/game/start prvo.");
         }
 
+        // 1. Inkrementiramo potez i pomeramo pseudo sat za 3 minuta unapred
         turnCounter++;
-        long t = clock.getCurrentTime();
+        clock.advanceTime(3, TimeUnit.MINUTES);
+        long t = clock.getCurrentTime(); // Uzimamo novo vreme za sve prateće događaje
 
         Player suggester = playersByName.get(req.suggester);
         Card suspect = cardsByName.get(req.suspect);
@@ -131,14 +133,14 @@ public class GameController {
             throw new IllegalArgumentException("Nepoznat igrač ili karta.");
         }
 
+        // Svi događaji u ovom potezu dele isti timestamp (t)
         Suggestion sug = new Suggestion(turnCounter, t, suggester, suspect, weapon, room);
         ks.insert(sug);
 
         if (req.noShowPlayers != null) {
             for (String pname : req.noShowPlayers) {
                 if (pname.equals(req.shower)) {
-                    System.out.println("[/suggestion] preskacem NoShow za " + pname
-                            + " jer je on pokazivac");
+                    System.out.println("[/suggestion] preskacem NoShow za " + pname + " jer je on pokazivac");
                     continue;
                 }
                 Player p = playersByName.get(pname);
@@ -159,9 +161,9 @@ public class GameController {
                 }
             }
         }
-        clock.advanceTime(1, TimeUnit.MINUTES);
+
         int fired = ks.fireAllRules();
-        System.out.println("[/suggestion] potez " + turnCounter + ", pravila: " + fired);
+        System.out.println("[/suggestion] potez " + turnCounter + " (vreme: " + t + "ms), pravila: " + fired);
 
         return snapshot();
     }
@@ -199,6 +201,11 @@ public class GameController {
                 .map(Object::toString).sorted().collect(Collectors.toList()));
         knowledge.put("solutions", ks.getObjects(o -> o instanceof Solution).stream()
                 .map(Object::toString).sorted().collect(Collectors.toList()));
+        knowledge.put("appliedRules", ks.getObjects(o -> o instanceof AppliedRule).stream()
+                .map(o -> (AppliedRule) o)
+                .sorted(Comparator.comparingLong(AppliedRule::getTimestamp))
+                .map(Object::toString)
+                .collect(Collectors.toList()));
         knowledge.put("gameResult", ks.getObjects(o -> o instanceof GameResult).stream()
                 .map(Object::toString).collect(Collectors.toList()));
         knowledge.put("backwardChaining", runBackwardChaining());
