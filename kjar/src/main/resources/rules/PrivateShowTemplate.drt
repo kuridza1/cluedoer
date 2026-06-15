@@ -10,19 +10,22 @@ import com.ftn.sbnz.model.PrivateShow;
 import com.ftn.sbnz.model.Suggestion;
 import com.ftn.sbnz.model.NotOwns;
 import com.ftn.sbnz.model.Owns;
+import com.ftn.sbnz.model.AppliedRule;
 
 template "PrivateShow-Owns-template"
 
 rule "5.1.4 PrivateShow: dve od tri eliminisane -> treca je Owns (@{candidateName} ostao)"
     when
-        PrivateShow($p: shower, $sug: suggestion)
+        $ps: PrivateShow($p: shower, $sug: suggestion)
         Suggestion(this == $sug, $sCard: suspect, $wCard: weapon, $rCard: room)
         NotOwns(player == $p, card == @{notOwnsCard1})
         NotOwns(player == $p, card == @{notOwnsCard2})
         not Owns(player == $p, card == @{candidateCard})
     then
         System.out.println("[5.1.4-TEMPLATE] PrivateShow: " + $p.getName() + " ima " + @{candidateCard}.getName() + " (@{candidateName} ostao)");
+
         insert(new Owns($p, @{candidateCard}));
+        insert(new AppliedRule("5.1.4", $p.getName() + " ima kartu @{candidateName}"));
 end
 
 end template

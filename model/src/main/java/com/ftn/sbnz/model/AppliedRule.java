@@ -10,7 +10,11 @@ public class AppliedRule {
         this.detail = detail;
         this.timestamp = System.currentTimeMillis();
     }
-
+    public AppliedRule(String ruleId, String description, long timestamp) {
+        this.ruleId = ruleId;
+        this.detail = description;
+        this.timestamp = timestamp;
+    }
     public String getRuleId() { return ruleId; }
     public String getDetail() { return detail; }
     public long getTimestamp() { return timestamp; }
