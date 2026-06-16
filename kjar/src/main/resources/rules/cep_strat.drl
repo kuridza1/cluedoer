@@ -24,6 +24,7 @@ import com.ftn.sbnz.model.HighSuspicion;
 import com.ftn.sbnz.model.KnowsCard;
 import com.ftn.sbnz.model.ScoreApplied;
 import com.ftn.sbnz.model.ProfileProcessed;
+import com.ftn.sbnz.model.AppliedRule;
 
 // ============================================================================
 // EVENT DECLARATIONS - CEP with pseudo clock (1 turn = 1 minute)
@@ -80,6 +81,7 @@ when
 then
     System.out.println("!!! [6.3.1] PRAVILO SE TRIGGERUJE !!!");
     insert(new HighSuspicion($p, $c));
+    insert(new AppliedRule("6.3.1", $p.getName() + " koristi " + $c.getName() + " u vise sugestija"));
     System.out.println("[6.3.1] VISOKA SUMNJA - " + $p.getName() +
                        " koristi " + $c.getName() + " u vise uzastopnih sugestija");
 end
@@ -108,6 +110,7 @@ when
 then
     System.out.println("!!! [6.3.2] PRAVILO SE TRIGGERUJE !!!");
     insert(new Profile($p, ProfileType.BLUFFING));
+    insert(new AppliedRule("6.3.2", $p.getName() + " blfira sa " + $c.getName()));
     System.out.println("[6.3.2] BLEFIRANJE - " + $p.getName() +
                        " vise puta koristi sopstvenu kartu " + $c.getName());
 end
@@ -143,6 +146,7 @@ when
 then
     System.out.println("!!! [6.3.3] PRAVILO SE TRIGGERUJE !!!");
     insert(new Profile($p, ProfileType.AGGRESSIVE));
+    insert(new AppliedRule("6.3.3", $p.getName() + " je postao agresivan u kasnoj igri"));
     System.out.println("[6.3.3] AGRESIVAN PROFIL - " + $p.getName() +
                        " naglo promenio obrazac sugestija u kasnoj igri");
 end
@@ -176,6 +180,7 @@ when
 then
     System.out.println("!!! [6.3.4] PRAVILO SE TRIGGERUJE !!!");
     insert(new KnowsCard($p, $c));
+    insert(new AppliedRule("6.3.4", $p.getName() + " zna za " + $c.getName()));
     System.out.println("[6.3.4] VEROVATNO ZNA - " + $p.getName() +
                        " prestao da koristi " + $c.getName());
 end
@@ -199,6 +204,7 @@ when
 then
     System.out.println("!!! [6.3.5] PRAVILO SE TRIGGERUJE !!!");
     insert(new RoomFocus($p, $r));
+    insert(new AppliedRule("6.3.5", $p.getName() + " fokusiran na " + $r.getName()));
     System.out.println("[6.3.5] FOKUS NA PROSTORIJU - " + $p.getName() +
                        " cesto koristi " + $r.getName());
 end
@@ -218,6 +224,7 @@ when
 then
     modify($cs) { setScore($cs.getScore() + 2) };
     insert(new ScoreApplied("FOCUS_BONUS", $p.getName() + ":" + $r.getName()));
+    insert(new AppliedRule("FOCUS_BONUS", $r.getName() + " +2 (fokus " + $p.getName() + ")"));
     System.out.println("CEP KOREKCIJA: +2 score za " + $r.getName()
             + " (fokus " + $p.getName() + ")");
 end
@@ -232,6 +239,7 @@ when
 then
     insert(new SuggestCard($c.getType(), $c));
     insert(new ScoreApplied("PRIORITIZE", $c.getName()));
+    insert(new AppliedRule("PRIORITIZE", $c.getName() + " (visoka sumnja)"));
     System.out.println("CEP PRIORITET: " + $c.getName() + " (visoka sumnja)");
 end
 
@@ -247,6 +255,7 @@ when
 then
     retract($sug);
     insert(new ScoreApplied("AVOID_KNOWN", $c.getName()));
+    insert(new AppliedRule("AVOID_KNOWN", $c.getName() + " (izbegavaj, protivnik zna)"));
     System.out.println("CEP IZBEGAVAM: " + $c.getName() + " jer protivnik zna za nju");
 end
 
@@ -260,6 +269,7 @@ when
 then
     modify($cs) { setScore($cs.getScore() + 1) };
     insert(new ScoreApplied("BUMP_SUSPICION", $p.getName() + ":" + $c.getName()));
+    insert(new AppliedRule("BUMP_SUSPICION", $c.getName() + " +1 (sumnja od " + $p.getName() + ")"));
     System.out.println("CEP: +1 score za " + $c.getName() + " (visoka sumnja od "
             + $p.getName() + ")");
 end
@@ -280,6 +290,7 @@ then
         " zbog visoke sumnje od strane protivnika"
     ));
     insert(new ScoreApplied("CEP_REC", $c.getName()));
+    insert(new AppliedRule("CEP_REC", $c.getName() + " (strateška preporuka)"));
     System.out.println("CEP: Izmenjena strateška preporuka za " + $c.getName());
 end
 
@@ -296,6 +307,7 @@ then
     insert(new RiskWarning(RiskLevel.MEDIUM, $p,
         "OPREZ: Igrač " + $p.getName() + " je agresivan u kasnoj igri!"));
     insert(new ScoreApplied("AGG_WARN", $p.getName()));
+    insert(new AppliedRule("AGG_WARN", $p.getName() + " (agresivan, oprez)"));
     System.out.println("CEP OPREZ: Agresivan protivnik " + $p.getName());
 end
 
@@ -309,6 +321,7 @@ when
 then
     retract($oldProfile);
     insert(new ProfileProcessed($p));
+    insert(new AppliedRule("REMOVE_OLD_PROFILE", $p.getName() + " (profil ažuriran)"));
     System.out.println("REMOVED OLD PROFILE for " + $p.getName());
 end
 
@@ -324,6 +337,7 @@ when
 then
     modify($cs) { setScore($cs.getScore() - 1) };
     insert(new ScoreApplied("EARLY_SPAM_PENALTY", $p.getName() + ":" + $c.getName()));
+    insert(new AppliedRule("EARLY_SPAM_PENALTY", $c.getName() + " -1 (early/mid spam)"));
     System.out.println("[6.3.1a] EARLY/MID SPAM: -1 za " + $c.getName()
             + " (protivnik " + $p.getName() + " je previse koristi)");
 end
@@ -340,6 +354,7 @@ when
 then
     modify($cs) { setScore($cs.getScore() + 3) };
     insert(new ScoreApplied("LATE_SPAM_BONUS", $p.getName() + ":" + $c.getName()));
+    insert(new AppliedRule("LATE_SPAM_BONUS", $c.getName() + " +3 (late game spam)"));
     System.out.println("[6.3.1b] LATE SPAM: +3 za " + $c.getName()
             + " (protivnik " + $p.getName() + " je opsesivno koristi u late game)");
 end
