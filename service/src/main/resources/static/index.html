@@ -456,6 +456,7 @@
         <div id="solutionBanner" class="top-panel">
             <div class="top-panel-title">Status istrage</div>
             <div id="solutionContent" class="solution-line">Još tražim rešenje…</div>
+            <div id="solutionDeductionPath" style="margin-top: 8px; font-size: 13px; color: #555;"></div>
         </div>
     </div>
 
@@ -734,7 +735,11 @@
         "5.2.3a": { type:"cep", system: "deduct", desc:"Karta u 4+ sugestija za 20min bez Reveal-a → sumnja +2", effect:"score+2" },
         "5.2.3b": { type:"cep", system: "deduct", desc:"Sugestija bez pokazivanja u 5min → sumnja +3 za sve 3 karte", effect:"score+3" },
         "5.2.3c": { type:"cep", system: "deduct", desc:"Karta nikad pokazana u poslednjih 20min → sumnja +1", effect:"score+1" },
-        "5.2.3d": { type:"cep", system: "deduct", desc: "Karta koju ne posedujem i ne znam da neko poseduje predugo nije ispitana", effect: "score+1"},
+        "5.2.3d": { type:"cep", system: "deduct", desc:"Karta koju ne posedujem i ne znam da neko poseduje predugo nije ispitana", effect: "score+1"},
+        "5.2.3e": { type:"cep", system: "deduct", desc:"Sumnjivo ućutkivanje karte nakon aktivnosti u prethodnih 15min → sumnja +1", effect:"score+1" },
+        "5.2.3f": { type:"cep", system: "deduct", desc:"Kumulativni NoShow kod 3+ različita igrača u 30min bez Reveal-a → sumnja +2", effect:"score+2" },
+        "5.2.3g": { type:"cep", system: "deduct", desc:"Recency decay: karta bez modifikacije 30min u sivoj zoni → sumnja -1", effect:"score-1" },
+        "5.2.3h": { type:"cep", system: "deduct", desc:"Brzina sugestija (Panika): 3+ sugestije za istu kartu unutar 6min → sumnja +3", effect:"score+3" },
 
         "6.3.1-PENALTY":  { type:"cep", system: "strat", desc:"Ista karta u 3 uzastopne sugestije → visoka sumnja", effect:"+HighSuspicion" },
         "6.3.2":  { type:"cep", system: "strat", desc:"Protivnik bar 2 puta koristi kartu koju ima → blefiraju", effect:"+Profile(BLUFFING)" },
@@ -857,6 +862,7 @@
         renderHints();
         renderAppliedRules(state.knowledgeSnapshot.appliedRules || [])
     }
+
 
     /* ----- Top banner: resenje + predlozena trojka po redu ----- */
     function renderTopBanner() {
