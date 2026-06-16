@@ -157,3 +157,66 @@ rule "5.1.3d - Karta u koverti -> NotOwns za sve igrače"
         insert(new AppliedRule("5.1.3d", $p.getName() + " !-> " + $card.getName()));
         System.out.println("[5.1.3d] " + $card.getName() + " -> NotOwns(" + $p.getName() + ")");
 end
+
+rule "5.1.5a - Dedukcija: Preklapanje ruku i eliminacija"
+    when
+        $p1: Player($hs: handSize, self == false)
+        // Igrač 1 ima tačno handSize - 1 poznatih karata
+        Number(intValue == ($hs - 1)) from accumulate(
+            Owns(player == $p1),
+            count(1)
+        )
+        // Postoji karta X za koju nismo sigurni da li je kod njega, ali je pod sumnjom
+        $unknownCard: Card()
+        not Owns(player == $p1, card == $unknownCard)
+        not NotOwns(player == $p1, card == $unknownCard)
+
+        // Ali saznamo da neki DRUGI igrač poseduje tu kartu X (iz Nivoa 1)
+        Owns(player != $p1, card == $unknownCard)
+    then
+        // Pošto je ta sumnjiva karta kod drugog, igrač 1 je SIGURNO nema
+        insert(new NotOwns($p1, $unknownCard));
+        insert(new AppliedRule("5.1.5a", $p1.getName() + " !-> " + $unknownCard.getName() + " (Cross-Match)"));
+end
+
+rule "5.1.5b - Dedukcija: PrivateShow eksterni dokaz"
+    when
+        // Imamo zabeležen PrivateShow (neko je nekome pokazao nešto)
+        $ps: PrivateShow($p: shower, $sug: suggestion)
+        Suggestion(this == $sug, $s: suspect, $w: weapon, $r: room)
+
+        // Znamo iz drugih izvora (Nivo 1) da su npr. Weapon i Room kod nekog trećeg
+        Owns(player != $p, card == $w)
+        Owns(player != $p, card == $r)
+
+        // A još uvek nemamo direktan dokaz za ovog igrača
+        not Owns(player == $p, card == $s)
+    then
+        // Zaključak: Pošto ostale dve drže drugi ljudi, on je morao pokazati Suspect-a!
+        insert(new Owns($p, $s));
+        insert(new AppliedRule("5.1.5b", $p.getName() + " ima " + $s.getName() + " (PS Eksterni Dokaz)"));
+end
+
+rule "5.1.6a - Meta: Svi vlasnici poznati -> Preostala ide u kovertu"
+    when
+        $type: CardType()
+        $targetCard: Card(type == $type)
+        not Solution(card == $targetCard)
+        not Owns(card == $targetCard)
+
+        // Brojimo koliko OSTALIH karata iz ove kategorije ima poznatog vlasnika
+        Number($totalOthers: intValue) from accumulate(
+            $c: Card(type == $type, this != $targetCard),
+            count($c)
+        )
+        Number(intValue == $totalOthers) from accumulate(
+            $c: Card(type == $type, this != $targetCard) and Owns(card == $c),
+            count(1)
+        )
+    then
+        // Sve ostale karte su podeljene među igračima, ova je tajna!
+        insert(new Solution($targetCard));
+        insert(new AppliedRule("5.1.6a", $targetCard.getName() + " (Svi vlasnici detektovani)"));
+        System.out.println("[NIVO 3] " + $targetCard.getName() + " je u koverti!");
+end
+
