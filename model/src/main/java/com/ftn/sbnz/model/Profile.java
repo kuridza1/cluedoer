@@ -9,6 +9,7 @@ public class Profile {
 
     private Player player;
     private ProfileType profile;
+    private long timestamp;
 
     public Profile() {
     }
@@ -16,6 +17,13 @@ public class Profile {
     public Profile(Player player, ProfileType profile) {
         this.player = player;
         this.profile = profile;
+        this.timestamp = System.currentTimeMillis();
+    }
+
+    public Profile(Player player, ProfileType profile, long timestamp) {
+        this.player = player;
+        this.profile = profile;
+        this.timestamp = timestamp;
     }
 
     public Player getPlayer() {
@@ -32,6 +40,14 @@ public class Profile {
 
     public void setProfile(ProfileType profile) {
         this.profile = profile;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     @Override

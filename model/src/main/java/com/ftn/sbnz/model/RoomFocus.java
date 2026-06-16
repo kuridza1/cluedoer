@@ -9,6 +9,7 @@ public class RoomFocus {
 
     private Player player;
     private Card room;
+    private long timestamp;
 
     public RoomFocus() {
     }
@@ -16,6 +17,13 @@ public class RoomFocus {
     public RoomFocus(Player player, Card room) {
         this.player = player;
         this.room = room;
+        this.timestamp = System.currentTimeMillis();
+    }
+
+    public RoomFocus(Player player, Card room, long timestamp) {
+        this.player = player;
+        this.room = room;
+        this.timestamp = timestamp;
     }
 
     public Player getPlayer() {
@@ -32,6 +40,14 @@ public class RoomFocus {
 
     public void setRoom(Card room) {
         this.room = room;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     @Override

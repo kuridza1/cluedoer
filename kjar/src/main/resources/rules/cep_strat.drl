@@ -31,48 +31,54 @@ import com.ftn.sbnz.model.ProfileProcessed;
 
 declare Suggestion
     @role(event)
-    @expires(30m)
+    @timestamp(timestamp)
+    @expires(60m)
 end
 
 declare HighSuspicion
     @role(event)
-    @expires(30m)
+    @timestamp(timestamp)
+    @expires(60m)
 end
 
 declare RoomFocus
     @role(event)
-    @expires(30m)
+    @timestamp(timestamp)
+    @expires(60m)
 end
 
 declare KnowsCard
     @role(event)
-    @expires(30m)
+    @timestamp(timestamp)
+    @expires(60m)
 end
 
 declare Profile
     @role(event)
-    @expires(30m)
+    @timestamp(timestamp)
+    @expires(60m)
 end
+
 // ============================================================================
 // 6.3.1 - Detekcija visoke sumnje kada igrač koristi istu kartu u više uzastopnih sugestija
 // ============================================================================
 
-// Ako protivnik koristi istu kartu u tri uzastopne sugestije u roku od 5 minuta (5 poteza)
+// Ako protivnik koristi istu kartu u tri uzastopne sugestije u roku od 15 minuta
 rule "6.3.1 - VISOKA SUMNJA - ISTA KARTA U VISE UZASTOPNIH SUGESTIJA"
 when
     $p: Player(self == false)
     $c: Card()
 
-    // Count suggestions with this card in last 5 minutes
     Number(intValue >= 3) from accumulate(
         $s: Suggestion(suggester == $p,
                        (suspect == $c || weapon == $c || room == $c))
-                       over window:time(5m),
+                       over window:time(15m),
         count($s)
     )
 
-    not HighSuspicion(player == $p, card == $c) over window:time(10m)
+    not HighSuspicion(player == $p, card == $c) over window:time(20m)
 then
+    System.out.println("!!! [6.3.1] PRAVILO SE TRIGGERUJE !!!");
     insert(new HighSuspicion($p, $c));
     System.out.println("[6.3.1] VISOKA SUMNJA - " + $p.getName() +
                        " koristi " + $c.getName() + " u vise uzastopnih sugestija");
@@ -83,7 +89,7 @@ end
 // ============================================================================
 
 // Ako protivnik u svojim sugestijama bar 2 puta navede kartu za koju znamo
-// da je poseduje u roku od 10 minuta, verovatno blefira
+// da je poseduje u roku od 20 minuta, verovatno blefira
 rule "6.3.2 - BLEFIRANJE - VISE PUTA KORISTI SOPSTVENU KARTU"
 when
     $p: Player(self == false)
@@ -94,12 +100,13 @@ when
     Number(intValue >= 2) from accumulate(
         Suggestion(suggester == $p,
                    suspect == $c || weapon == $c || room == $c)
-                   over window:time(10m),
+                   over window:time(20m),
         count(1)
     )
 
-    not Profile(player == $p, profile == ProfileType.BLUFFING) over window:time(15m)
+    not Profile(player == $p, profile == ProfileType.BLUFFING) over window:time(25m)
 then
+    System.out.println("!!! [6.3.2] PRAVILO SE TRIGGERUJE !!!");
     insert(new Profile($p, ProfileType.BLUFFING));
     System.out.println("[6.3.2] BLEFIRANJE - " + $p.getName() +
                        " vise puta koristi sopstvenu kartu " + $c.getName());
@@ -110,33 +117,31 @@ end
 // ============================================================================
 
 // U kasnoj igri, ako protivnik naglo promeni obrazac sugestija (razlicite karte
-// u uzastopnim potezima) u roku od 3 minute, verovatno je postao agresivan
+// u uzastopnim potezima) u roku od 5 minuta, verovatno je postao agresivan
 rule "6.3.3 - AGRESIVAN PROFIL - NAGLA PROMENA OBRASCA U KASNOJ IGRI"
 when
     GameState(status == GameStatus.LATE_GAME)
     $p: Player(self == false)
 
-    // Get two consecutive suggestions from the same player
     $sug1: Suggestion(suggester == $p)
     $sug2: Suggestion(suggester == $p,
                       this != $sug1,
                       timestamp > $sug1.timestamp,
-                      this after[0s, 3m] $sug1)
+                      this after[0s, 5m] $sug1)
 
-    // Ensure no other suggestion from this player between them
     not Suggestion(suggester == $p,
                    this != $sug1,
                    this != $sug2,
                    timestamp > $sug1.timestamp,
                    timestamp < $sug2.timestamp)
 
-    // Check if at least two of the three cards changed
     eval(($sug1.getSuspect() != $sug2.getSuspect() ? 1 : 0) +
          ($sug1.getWeapon() != $sug2.getWeapon() ? 1 : 0) +
          ($sug1.getRoom() != $sug2.getRoom() ? 1 : 0) >= 2)
 
-    not Profile(player == $p, profile == ProfileType.AGGRESSIVE) over window:time(15m)
+    not Profile(player == $p, profile == ProfileType.AGGRESSIVE) over window:time(25m)
 then
+    System.out.println("!!! [6.3.3] PRAVILO SE TRIGGERUJE !!!");
     insert(new Profile($p, ProfileType.AGGRESSIVE));
     System.out.println("[6.3.3] AGRESIVAN PROFIL - " + $p.getName() +
                        " naglo promenio obrazac sugestija u kasnoj igri");
@@ -146,31 +151,30 @@ end
 // 6.3.4 - Zaključak da protivnik zna za kartu
 // ============================================================================
 
-// Ako je protivnik koristio kartu bar 2 puta u roku od 10 minuta,
-// a zatim potpuno prestao da je koristi u narednih 5 minuta
+// Ako je protivnik koristio kartu bar 2 puta u roku od 15 minuta,
+// a zatim potpuno prestao da je koristi u narednih 10 minuta
 rule "6.3.4 - VEROVATNO ZNA ZA KARTU - PRESTAO DA KORISTI"
 when
     $p: Player(self == false)
     $c: Card()
 
-    // Igrač je koristio kartu u NAJMANJE 2 sugestije u zadnjih 10 minuta
     Number(intValue >= 2) from accumulate(
         Suggestion(suggester == $p,
                    suspect == $c || weapon == $c || room == $c)
-                   over window:time(10m),
+                   over window:time(15m),
         count(1)
     )
 
-    // Prestao je da je koristi u poslednjih 5 minuta
     not Suggestion(suggester == $p,
                    suspect == $c || weapon == $c || room == $c)
-                   over window:time(5m)
+                   over window:time(10m)
 
     CardScore(card == $c, score > 0)
     CardScore(card == $c, score < 50)
 
-    not KnowsCard(player == $p, card == $c) over window:time(20m)
+    not KnowsCard(player == $p, card == $c) over window:time(30m)
 then
+    System.out.println("!!! [6.3.4] PRAVILO SE TRIGGERUJE !!!");
     insert(new KnowsCard($p, $c));
     System.out.println("[6.3.4] VEROVATNO ZNA - " + $p.getName() +
                        " prestao da koristi " + $c.getName());
@@ -180,19 +184,20 @@ end
 // 6.3.5 - Detekcija fokusa na prostoriju
 // ============================================================================
 
-// Ako protivnik bar 2 puta koristi istu prostoriju u sugestijama u roku od 5 minuta
+// Ako protivnik bar 2 puta koristi istu prostoriju u sugestijama u roku od 10 minuta
 rule "6.3.5 - FOKUS NA PROSTORIJU - ISTA PROSTORIJA"
 when
     $p: Player(self == false)
     $r: Card(type == CardType.ROOM)
 
     Number(intValue >= 2) from accumulate(
-        Suggestion(suggester == $p, room == $r) over window:time(5m),
+        Suggestion(suggester == $p, room == $r) over window:time(10m),
         count(1)
     )
 
-    not RoomFocus(player == $p, room == $r) over window:time(10m)
+    not RoomFocus(player == $p, room == $r) over window:time(15m)
 then
+    System.out.println("!!! [6.3.5] PRAVILO SE TRIGGERUJE !!!");
     insert(new RoomFocus($p, $r));
     System.out.println("[6.3.5] FOKUS NA PROSTORIJU - " + $p.getName() +
                        " cesto koristi " + $r.getName());
@@ -313,33 +318,14 @@ rule "6.3.1a - EARLY MID SPAM PENALTY"
 salience 12
 when
     GameState(status == GameStatus.EARLY_GAME || status == GameStatus.MID_GAME)
-
     $hs: HighSuspicion($p: player, $c: card)
-
     $cs: CardScore(card == $c, score > 1)
-
-    not ScoreApplied(
-        ruleId == "EARLY_SPAM_PENALTY",
-        key == ($p.getName() + ":" + $c.getName())
-    )
-
+    not ScoreApplied(ruleId == "EARLY_SPAM_PENALTY", key == ($p.getName() + ":" + $c.getName()))
 then
-    modify($cs) {
-        setScore($cs.getScore() - 1)
-    };
-
-    insert(new ScoreApplied(
-        "EARLY_SPAM_PENALTY",
-        $p.getName() + ":" + $c.getName()
-    ));
-
-    System.out.println(
-        "[6.3.1a] EARLY/MID SPAM: -1 za "
-        + $c.getName()
-        + " (protivnik "
-        + $p.getName()
-        + " je previse koristi)"
-    );
+    modify($cs) { setScore($cs.getScore() - 1) };
+    insert(new ScoreApplied("EARLY_SPAM_PENALTY", $p.getName() + ":" + $c.getName()));
+    System.out.println("[6.3.1a] EARLY/MID SPAM: -1 za " + $c.getName()
+            + " (protivnik " + $p.getName() + " je previse koristi)");
 end
 
 // U kasnoj igri, ako protivnik cesto koristi istu kartu (visoka sumnja),
@@ -348,31 +334,12 @@ rule "6.3.1b - LATE GAME SPAM BONUS"
 salience 13
 when
     GameState(status == GameStatus.LATE_GAME)
-
     $hs: HighSuspicion($p: player, $c: card)
-
     $cs: CardScore(card == $c, score > 0)
-
-    not ScoreApplied(
-        ruleId == "LATE_SPAM_BONUS",
-        key == ($p.getName() + ":" + $c.getName())
-    )
-
+    not ScoreApplied(ruleId == "LATE_SPAM_BONUS", key == ($p.getName() + ":" + $c.getName()))
 then
-    modify($cs) {
-        setScore($cs.getScore() + 3)
-    };
-
-    insert(new ScoreApplied(
-        "LATE_SPAM_BONUS",
-        $p.getName() + ":" + $c.getName()
-    ));
-
-    System.out.println(
-        "[6.3.1b] LATE SPAM: +3 za "
-        + $c.getName()
-        + " (protivnik "
-        + $p.getName()
-        + " je opsesivno koristi u late game)"
-    );
+    modify($cs) { setScore($cs.getScore() + 3) };
+    insert(new ScoreApplied("LATE_SPAM_BONUS", $p.getName() + ":" + $c.getName()));
+    System.out.println("[6.3.1b] LATE SPAM: +3 za " + $c.getName()
+            + " (protivnik " + $p.getName() + " je opsesivno koristi u late game)");
 end
