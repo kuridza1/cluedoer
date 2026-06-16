@@ -9,6 +9,7 @@ import java.util.Objects;
 public class GameState {
 
     private GameStatus status;
+    private long timestamp;
 
     public GameState() {
     }
@@ -25,6 +26,13 @@ public class GameState {
         this.status = status;
     }
 
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
