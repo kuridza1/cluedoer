@@ -20,6 +20,7 @@ public class DroolsConfig {
 
         String[] drlPaths = {
                 "rules/backward_deduct.drl",
+                "rules/backward_strat.drl",
                 "rules/cep_deduct.drl",
                 "rules/cep_strat.drl",
                 "rules/forward_deduct.drl",

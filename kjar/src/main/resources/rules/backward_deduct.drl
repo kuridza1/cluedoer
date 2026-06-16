@@ -6,8 +6,24 @@ import com.ftn.sbnz.model.Owns;
 import com.ftn.sbnz.model.NotOwns;
 import com.ftn.sbnz.model.Player;
 import com.ftn.sbnz.model.Solution;
+import com.ftn.sbnz.model.GameResult;
 
-// bazni query
+declare DeductionLink
+    cause : String
+    conclusion : String
+end
+
+query isDerivedFrom(String $targetConclusion, String $sourceCause)
+    DeductionLink(conclusion == $targetConclusion, cause == $sourceCause)
+    or
+    (
+        DeductionLink(conclusion == $targetConclusion, $intermediate: cause)
+        and
+        isDerivedFrom($intermediate, $sourceCause; )
+    )
+end
+
+
 query "isInEnvelope"(Card $c)
     Card(this == $c)
     not (
@@ -20,7 +36,6 @@ query "eliminatedFromEnvelope"(Card $c)
     Owns(card == $c)
 end
 
-// rekurzija kad je samo jedna karta ostala u kategoriji
 query "isOnlyCandidateInCategory"(Card $c)
     Card(this == $c, $type: type)
     not (
@@ -29,7 +44,6 @@ query "isOnlyCandidateInCategory"(Card $c)
     )
 end
 
-// kompletno resenje
 query "solutionKnown"(Card $suspect, Card $weapon, Card $room)
     Card(this == $suspect, type == CardType.SUSPECT)
     Card(this == $weapon, type == CardType.WEAPON)
@@ -45,14 +59,23 @@ query "possibleOwners"(Card $c, Player $p)
     not NotOwns(player == $p, card == $c)
 end
 
-// Forward pravilo koje koristi backward query iznutra
-// (chain: forward -> backward query -> forward inserts)
+
 rule "BC - Karta u koverti po kategorijskoj eliminaciji"
     when
-        $c: Card($name: name)
+        $c: Card($name: name, $type: type)
         isOnlyCandidateInCategory($c;)
         not Solution(card == $c)
+
+        $ownersList: java.util.List() from accumulate(
+            $otherCard: Card(type == $type, this != $c) and Owns(card == $otherCard, $owner: player),
+            collectList("Player:" + $owner.getName() + ":Owns:" + $otherCard.getName())
+        )
     then
         insert(new Solution($c));
         System.out.println("[BC] " + $name + " u koverti (jedini kandidat u kategoriji)");
+
+        String conclusionKey = "Envelope:Solution:" + $name;
+        for(Object ownerInfo : $ownersList) {
+            insert(new DeductionLink((String)ownerInfo, conclusionKey));
+        }
 end

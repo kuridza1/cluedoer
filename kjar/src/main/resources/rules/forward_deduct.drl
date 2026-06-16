@@ -38,25 +38,32 @@ declare PrivateShow
 end
 
 rule "5.1.1 - Sopstvena karta: Score = 0"
+    salience 100  // Visok prioritet - izvršava se ODMAH na startu
+    no-loop true
     when
         $o: Owns($player: player, $card: card)
         Player(this == $player, self == true)
         $s: CardScore(card == $card, score != 0)
-        not AppliedRule(ruleId == "5.1.1")
+        not AppliedRule(ruleId == "5.1.1", detail == $card.getName())
     then
         modify($s) { setScore(0) };
         insert(new AppliedRule("5.1.1", $card.getName()));
 end
 
 rule "5.1.2a - Karta u igri: Score = 0"
+    salience 95   // Odmah nakon sopstvenih karata
+    no-loop true
     when
-        Owns($card: card)
+        $o: Owns($card: card, $player: player)
+        Player(this == $player, self == false)
         $s: CardScore(card == $card, score != 0)
         not AppliedRule(ruleId == "5.1.2a", detail == $card.getName())
     then
         modify($s) { setScore(0) };
         insert(new AppliedRule("5.1.2a", $card.getName()));
 end
+
+
 
 rule "5.1.2b - Reveal -> Owns"
     when
@@ -77,18 +84,19 @@ rule "5.1.2c - Owns(A,X) -> NotOwns(B,X) za sve B != A"
         insert(new AppliedRule("5.1.2c", $other.getName() + " !-> " + $card.getName()));
 end
 
+
 rule "5.1.2e - Sopstvena karta kategorije -> NotOwns nijednu drugu kartu te kategorije"
     when
         Player(self == true, $self: this)
         Owns(player == $self, $ownedCard: card)
-        $otherCard: Card(this != $ownedCard)
+        // ISPRAVLJENO: Dodat uslov da druga karta mora biti ISTOG TIPA (kategorije)
+        $otherCard: Card(this != $ownedCard, type == $ownedCard.type)
         not Owns(player == $self, card == $otherCard)
         not NotOwns(player == $self, card == $otherCard)
     then
         insert(new NotOwns($self, $otherCard));
         insert(new AppliedRule("5.1.2e", $self.getName() + " !-> " + $otherCard.getName()));
 end
-
 rule "5.1.2f - Protivnik Owns = handSize -> NotOwns ostale karte"
     when
         $p: Player(self == false, $hs: handSize)
@@ -131,20 +139,22 @@ end
 rule "5.1.3c - Jedina karta u kategoriji bez NotOwns za sve -> u koverti"
     when
         $type: CardType()
+
         Number(intValue == 1) from accumulate(
-            $c: Card(type == $type)
-            and CardScore(card == $c, score > 0)
-            and not Solution(card == $c),
+            $c: Card(type == $type) and
+            not Solution(card == $c) and
+            not Owns(card == $c), // Tražimo kartu koja nema vlasnika i nije rešenje
             count($c)
         )
+
         $card: Card(type == $type)
-        CardScore(card == $card, score > 0)
         not Solution(card == $card)
         not Owns(card == $card)
+
     then
         insert(new Solution($card));
         insert(new AppliedRule("5.1.3c", $card.getName()));
-        System.out.println("[5.1.3c] " + $card.getName() + " jedini kandidat");
+        System.out.println("[5.1.3c] " + $card.getName() + " je jedini preostali kandidat u kategoriji " + $type);
 end
 
 rule "5.1.3d - Karta u koverti -> NotOwns za sve igrače"
