@@ -76,6 +76,11 @@ rule "BC - Karta u koverti po kategorijskoj eliminaciji"
 
         String conclusionKey = "Envelope:Solution:" + $name;
         for(Object ownerInfo : $ownersList) {
-            insert(new DeductionLink((String)ownerInfo, conclusionKey));
+            System.out.println(
+                "[BC LINK] " + ownerInfo + " -> " + conclusionKey
+            );
+            DeductionLink link = new DeductionLink((String)ownerInfo, conclusionKey);
+            insert(link);
         }
+
 end
